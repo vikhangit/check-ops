@@ -1,0 +1,77 @@
+{
+  "name": "quan-ly-checklist",
+  "version": "7.0.0",
+  "author": "Developer",
+  "description": "CheckOps v6 - Quản Lý Vận Hành",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && npm run build:electron && electron . --no-sandbox",
+    "build": "npm run build:vite && npm run build:electron",
+    "build:vite": "vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "restart:electron": "npm run build:electron && (Get-Process electron -ErrorAction SilentlyContinue | Stop-Process -Force); electron . --no-sandbox",
+    "dist": "npm run build && electron-builder --win",
+    "dist:dir": "npm run build && electron-builder --win --dir"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.102.1",
+    "@types/file-saver": "^2.0.7",
+    "better-sqlite3": "^12.8.0",
+    "electron-updater": "^6.8.3",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
+    "google-auth-library": "^10.6.2",
+    "googleapis": "^171.4.0",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.3",
+    "recharts": "^2.10.3",
+    "uuid": "^9.0.1",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.11.5",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/uuid": "^9.0.7",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^33.3.1",
+    "electron-builder": "^24.9.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "QuanLyChecklist",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "vikhangit",
+        "repo": "check-ops",
+        "channel": "latest"
+      }
+    ],
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "productName": "CheckOps v6",
+    "copyright": "Copyright © 2026 CheckOps v6"
+  }
+}

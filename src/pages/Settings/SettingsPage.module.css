@@ -1,0 +1,126 @@
+.page {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px;
+  position: sticky;
+  top: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.tab:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
+.tabActive { background: rgba(99,102,241,0.15); color: var(--c-primary-light); }
+
+.content { min-width: 0; }
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Users */
+.userList { display: flex; flex-direction: column; gap: 10px; }
+
+.userRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.userAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--c-primary), var(--c-accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.userInfo { flex: 1; min-width: 0; }
+.userName { font-size: 13px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+.userEmail { font-size: 11px; color: var(--text-muted); }
+
+.youBadge { font-size: 10px; color: var(--c-success); background: rgba(16,185,129,0.1); padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+
+.roleBadge { font-size: 11px; color: var(--text-muted); font-weight: 600; padding: 3px 8px; border-radius: 20px; background: var(--bg-surface-2); border: 1px solid var(--border); }
+.adminBadge { color: #f59e0b; background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); }
+
+/* Categories */
+.catGroup { margin-bottom: 16px; }
+.catGroupTitle { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+.catRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.catDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.catIcon { font-size: 16px; }
+.catName { font-size: 13px; color: var(--text-secondary); font-weight: 500; flex: 1; }
+
+/* Sync */
+.syncCard { margin-bottom: 14px; padding: 18px 20px; }
+.syncCardTitle { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; }
+
+.logList { display: flex; flex-direction: column; gap: 6px; }
+.logRow { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 6px 10px; border-radius: 8px; background: var(--bg-surface-2); }
+.log_success { border-left: 3px solid var(--c-success); }
+.log_error { border-left: 3px solid var(--c-danger); }
+.logStatus { flex-shrink: 0; }
+.logDir { font-weight: 600; color: var(--text-secondary); }
+.logTime { color: var(--text-muted); flex: 1; }
+.logCount { font-weight: 600; color: var(--text-secondary); }
+.logError { color: var(--c-danger); font-size: 11px; }
+
+/* About */
+.aboutGrid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+.aboutLabel { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px; }
+.aboutVal { font-size: 13px; color: var(--text-primary); font-weight: 500; }

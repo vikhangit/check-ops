@@ -1,0 +1,354 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Date Navigation */
+.dateNav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+
+.dateCenter {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.dateLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.datePicker {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.datePicker:focus { border-color: var(--c-primary); }
+
+/* Day Stats Bar */
+.dayStats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+
+.dayStatsLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dayStatItem {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.dayStatItem.done { color: var(--c-success); }
+.dayStatItem.error { color: var(--c-danger); }
+
+.progressBar {
+  width: 100px;
+  height: 6px;
+  background: var(--bg-surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c-primary), var(--c-success));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.dayStatsActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Filter Bar */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Table */
+.tableWrapper {
+  padding: 0;
+  overflow: visible;
+  overflow-x: auto;  /* Horizontal scroll on narrow screens */
+  padding-bottom: 100px; /* Thêm khoảng trống ở dưới để không bị khuất dropdown */
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;  /* Forces columns to respect declared widths */
+  min-width: 780px;  /* Minimum total table width before scroll kicks in */
+}
+
+.table thead tr {
+  background: var(--bg-surface-2);
+}
+
+.table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  /* Note: no overflow:hidden here — that would clip dropdown popovers */
+}
+
+.row {
+  transition: background 0.15s ease;
+}
+
+.row:hover {
+  background: var(--bg-surface-hover);
+}
+
+.row:last-child td {
+  border-bottom: none;
+}
+
+.row_done { border-left: 3px solid var(--c-success); }
+.row_error { border-left: 3px solid var(--c-danger); }
+.row_in_progress { border-left: 3px solid var(--c-warning); }
+.row_pending { border-left: 3px solid transparent; }
+
+.expandedParent {
+  background: rgba(99, 102, 241, 0.03);
+}
+
+.subRow {
+  background: var(--bg-surface);
+  transition: background 0.15s ease;
+}
+
+.subRow:hover {
+  background: var(--bg-surface-hover);
+}
+
+.subRowError {
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.numCell {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.titleCell {
+  /* Let this column expand — table-layout:fixed will distribute remaining space */
+  min-width: 0;  /* required for text-overflow to work in flex child */
+}
+
+.titleMain {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.titleSub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notesLine {
+  font-size: 11px;
+  color: var(--c-accent);
+  margin-top: 3px;
+  font-style: italic;
+}
+
+.catChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.userChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.userInitial {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--c-primary), var(--c-accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Status dropdown */
+.statusCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDropdownWrapper {
+  position: relative;
+  z-index: 10; /* Ensure it stays above row content */
+}
+
+.statusBtn {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 10px;
+  transition: all 0.15s ease;
+}
+
+.statusBtn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.statusDropdown {
+  position: absolute;
+  top: -20px;
+  left: -40px;
+  z-index: 1000;
+  background: #1a1c2a; /* Solid background to prevent overlap transparency */
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 4px;
+  min-width: 140px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  animation: fadeIn 0.15s ease;
+}
+
+.statusOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.statusOption:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.statusOptionActive {
+  background: rgba(99,102,241,0.1);
+  color: var(--c-primary-light);
+}
+
+.priorityChip {
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.timeCell {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,251 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.periodTabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.periodTab {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.periodTabActive {
+  background: var(--c-primary);
+  color: white;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.statCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.statCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--card-color, var(--c-primary));
+  opacity: 0.8;
+}
+
+.statCard:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.statIcon {
+  font-size: 28px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--card-color, var(--text-primary));
+  line-height: 1;
+  text-shadow: 0 0 20px var(--card-color, rgba(99,102,241,0.4));
+  transition: all 0.25s ease;
+}
+
+.statCard:hover .statValue {
+  text-shadow: 0 0 30px var(--card-color, rgba(99,102,241,0.7));
+  transform: scale(1.05);
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.statSub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--card-color, var(--c-primary));
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  text-shadow: 0 0 8px var(--card-color, rgba(99,102,241,0.5));
+}
+
+.chartRow {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 16px;
+}
+
+.chartCard {
+  min-height: 300px;
+}
+
+.chartCardSmall {
+  min-height: 300px;
+}
+
+.chartFull {
+  min-height: 280px;
+}
+
+.chartHeader {
+  margin-bottom: 16px;
+}
+
+.chartTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pieLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.pieLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pieDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pieName {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.pieVal {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.categoryCard {
+  padding: 20px;
+}
+
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.categoryRow {
+  display: grid;
+  grid-template-columns: 180px 1fr 100px;
+  align-items: center;
+  gap: 14px;
+}
+
+.categoryInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.catIcon {
+  font-size: 16px;
+}
+
+.catName {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catBar {
+  height: 8px;
+  background: var(--bg-surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.catBarFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.catStats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.catRate {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 35px;
+  text-align: right;
+}
+
+.catCount {
+  font-size: 11px;
+  color: var(--text-muted);
+}
