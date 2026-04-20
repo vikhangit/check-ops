@@ -101,9 +101,12 @@
   transition: all 0.25s ease;
 }
 
-.statCard:hover .statValue {
-  text-shadow: 0 0 30px var(--card-color, rgba(99,102,241,0.7));
-  transform: scale(1.05);
+.statCardClickable {
+  cursor: pointer;
+}
+
+.statCardClickable:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .statLabel {
@@ -196,6 +199,13 @@
   grid-template-columns: 180px 1fr 100px;
   align-items: center;
   gap: 14px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.categoryRow:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .categoryInfo {

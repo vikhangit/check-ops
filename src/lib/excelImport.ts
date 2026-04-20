@@ -16,6 +16,7 @@ export async function downloadTemplateSample() {
     { header: 'Người Phụ Trách', key: 'assigned_user_name', width: 20 },
     { header: 'Ưu Tiên', key: 'priority', width: 15 },
     { header: 'Trạng Thái', key: 'status', width: 15 },
+    { header: 'Thứ Tự (Sort)', key: 'sort_order', width: 12 },
     { header: 'Template Con 1', key: 'subitem1', width: 25 },
     { header: 'Template Con 2', key: 'subitem2', width: 25 },
     { header: 'Template Con 3', key: 'subitem3', width: 25 },
@@ -39,6 +40,7 @@ export async function downloadTemplateSample() {
     assigned_user_name: 'Nguyễn Văn A',
     priority: 'high',
     status: 'active',
+    sort_order: 1,
     subitem1: 'Kiểm tra hệ thống chữa cháy',
     subitem2: 'Kiểm tra thiết bị bảo hộ',
     subitem3: 'Kiểm tra đường thoát hiểm',
@@ -53,6 +55,7 @@ export async function downloadTemplateSample() {
     assigned_user_name: 'Trần Thị B',
     priority: 'normal',
     status: 'active',
+    sort_order: 2,
     subitem1: 'Kiểm tra dầu máy',
     subitem2: 'Vệ sinh bộ lọc',
     subitem3: 'Kiểm tra dây đai',
@@ -67,6 +70,7 @@ export async function downloadTemplateSample() {
     assigned_user_name: '',
     priority: 'low',
     status: 'active',
+    sort_order: 3,
     subitem1: 'Kiểm tra bao bì',
     subitem2: 'Đóng gói theo tiêu chuẩn',
     subitem3: 'Dán nhãn sản phẩm',
@@ -100,7 +104,10 @@ export async function downloadTemplateSample() {
     title: '6. Trạng Thái: active/inactive'
   })
   worksheet.addRow({
-    title: '7. Template Con: Có thể có tối đa 5 mục con (có thể để trống)'
+    title: '7. Thứ Tự (Sort): Số nguyên để sắp xếp (0, 1, 2...)'
+  })
+  worksheet.addRow({
+    title: '8. Template Con: Có thể có tối đa 5 mục con (có thể để trống)'
   })
 
   // Create buffer and download
@@ -119,6 +126,7 @@ export async function parseTemplateExcel(file: File): Promise<Array<{
   assigned_user_name?: string
   priority: 'low' | 'normal' | 'high'
   is_active: number
+  sort_order: number
   sub_items: Array<{ id: string; title: string; status: string; notes: string }>
 }>> {
   const workbook = new ExcelJS.Workbook()
@@ -136,6 +144,7 @@ export async function parseTemplateExcel(file: File): Promise<Array<{
     assigned_user_name?: string
     priority: 'low' | 'normal' | 'high'
     is_active: number
+    sort_order: number
     sub_items: Array<{ id: string; title: string; status: string; notes: string }>
   }> = []
 
@@ -152,6 +161,7 @@ export async function parseTemplateExcel(file: File): Promise<Array<{
     const assigned_user_name = row.getCell(4).value?.toString()?.trim() || ''
     const priorityStr = row.getCell(5).value?.toString()?.trim()?.toLowerCase() || 'normal'
     const statusStr = row.getCell(6).value?.toString()?.trim()?.toLowerCase() || 'active'
+    const sort_order = Number(row.getCell(7).value) || rowIndex - 1
 
     // Validate priority
     const priority = ['low', 'normal', 'high'].includes(priorityStr) ? priorityStr as 'low' | 'normal' | 'high' : 'normal'
@@ -161,7 +171,7 @@ export async function parseTemplateExcel(file: File): Promise<Array<{
 
     // Collect sub-items
     const sub_items: Array<{ id: string; title: string; status: string; notes: string }> = []
-    for (let col = 7; col <= 11; col++) { // Columns G to K (subitem1 to subitem5)
+    for (let col = 8; col <= 12; col++) { // Columns H to L (subitem1 to subitem5)
       const subItemTitle = row.getCell(col).value?.toString()?.trim()
       if (subItemTitle) {
         sub_items.push({
@@ -180,6 +190,7 @@ export async function parseTemplateExcel(file: File): Promise<Array<{
       assigned_user_name: assigned_user_name || undefined,
       priority,
       is_active,
+      sort_order,
       sub_items
     })
   }

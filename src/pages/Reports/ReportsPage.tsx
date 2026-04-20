@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { useDataStore } from '../../store/useDataStore'
 import { supabase, safeAuthQuery } from '../../lib/supabase'
@@ -40,9 +40,10 @@ export function ReportsPage() {
           .from('checklist_items')
           .select(`
             id, title, description, date, status, priority, notes, check_time,
-            sort_order, sub_items, category_id, assigned_user_id, created_at,
+            sort_order, sub_items, category_id, assigned_user_id, created_at, template_id,
             category:categories(id, name, color, icon),
-            assigned_user:profiles!checklist_items_assigned_user_id_fkey(id, name, role)
+            assigned_user:profiles!checklist_items_assigned_user_id_fkey(id, name, role),
+            template:checklist_templates(sort_order)
           `)
           .gte('date', currentFilters.dateFrom)
           .lte('date', currentFilters.dateTo)
@@ -78,6 +79,8 @@ export function ReportsPage() {
         }
         return {
           ...item,
+          // Use template's sort_order, fallback to item's, then 9999. Treat 0 as 9999.
+          sort_order: Number((item as any).template?.sort_order || item.sort_order || 9999),
           category_name: (item as any).category?.name ?? '',
           category_color: (item as any).category?.color ?? '',
           category_icon: (item as any).category?.icon ?? '',
@@ -87,7 +90,19 @@ export function ReportsPage() {
       })
 
       console.log(`[Reports] Loaded ${mapped.length} items, sub_items sample:`, mapped[0]?.sub_items?.length)
-      setItems(mapped as any)
+      
+      // Sort in-memory: Sort Order ASC (Primary), then Date DESC (Secondary)
+      const sorted = mapped.sort((a, b) => {
+        const sa = a.sort_order ?? 9999
+        const sb = b.sort_order ?? 9999
+        if (sa !== sb) return sa - sb
+        
+        const dateA = new Date(a.date).getTime()
+        const dateB = new Date(b.date).getTime()
+        return dateB - dateA
+      })
+
+      setItems(sorted as any)
     } catch (err: any) {
       console.error('Error loading reports details:', err)
       toast.error(`Lỗi: ${err.message || 'Không thể tải dữ liệu báo cáo'}`)
@@ -347,7 +362,7 @@ export function ReportsPage() {
                       <td className={styles.numCell}>{i + 1}</td>
                       <td>{item.date}</td>
                       <td>
-                        <div className={styles.titleMain}>{item.title}</div>
+                        <div className={styles.titleMain} style={{ fontWeight: 500 }}>{item.title}</div>
                         {item.description && <div className={styles.titleSub}>{item.description}</div>}
                       </td>
                       <td>

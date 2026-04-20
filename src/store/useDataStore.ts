@@ -44,6 +44,7 @@ interface DataState {
     assigned_user_id: string
     search: string
   }) => Promise<void>
+  reorderTemplates: (ids: string[]) => Promise<void>
 }
 
 const today = new Date().toISOString().split('T')[0]
@@ -167,6 +168,36 @@ export const useDataStore = create<DataState>((set, get) => ({
       throw err
     } finally {
       set({ reportLoading: false })
+    }
+  },
+
+  reorderTemplates: async (ids: string[]) => {
+    try {
+      // Optimistic update
+      const { templates } = get()
+      const reordered = ids.map((id, index) => {
+        const tpl = templates.find(t => t.id === id)
+        return { ...tpl, sort_order: index + 1 } as ChecklistTemplate
+      })
+      set({ templates: reordered })
+
+      // Real update to Supabase
+      for (let i = 0; i < ids.length; i++) {
+        const newOrder = i + 1
+        // 1. Update Template
+        await supabase
+          .from('checklist_templates')
+          .update({ sort_order: newOrder } as any)
+          .eq('id', ids[i])
+        
+        // 2. Update existing items to match (optional since step 1 handles it via join, but good for consistency)
+        await supabase
+          .from('checklist_items')
+          .update({ sort_order: newOrder } as any)
+          .eq('template_id', ids[i])
+      }
+    } catch (err) {
+      console.error('reorderTemplates error:', err)
     }
   },
 }))

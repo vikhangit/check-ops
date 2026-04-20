@@ -174,7 +174,18 @@ export function registerExportHandlers() {
       let totalErrorCount = 0
       let resolvedErrorCount = 0
 
-      items.forEach((it: any, i: number) => {
+      // Sort items: Sort Order ASC (Primary), then Date DESC (Secondary)
+      const sortedItems = [...items].sort((a, b) => {
+        const sa = Number(a.sort_order || 9999)
+        const sb = Number(b.sort_order || 9999)
+        if (sa !== sb) return sa - sb
+        
+        const da = new Date(a.date).getTime()
+        const db = new Date(b.date).getTime()
+        return db - da
+      })
+
+      sortedItems.forEach((it: any, i: number) => {
         const subs = Array.isArray(it.sub_items) ? it.sub_items : []
         const subTotal = subs.length
         const subDone = subs.filter((sub: any) => sub.status === 'done').length
@@ -308,6 +319,10 @@ export function registerExportHandlers() {
 
   ipcMain.handle('export:toPdf', async (event, { items, dateRange, title }: any) => {
     const exportId = Math.random().toString(36).substring(7)
+    console.log(`[PDF ${exportId}] Starting export with ${items.length} items`)
+    if (items.length > 0) {
+      console.log(`[PDF ${exportId}] First item:`, JSON.stringify(items[0], null, 2))
+    }
     
     if (isPdfExporting) {
       return { success: false, message: 'Hệ thống đang bận xuất PDF khác.' }
@@ -337,21 +352,25 @@ export function registerExportHandlers() {
         in_progress: items.filter((it: any) => it.status === 'in_progress').length,
       }
 
-      const rows = items.map((it: any, i: number) => {
+      // Sort items: Sort Order ASC (Primary), then Date DESC (Secondary)
+      const sortedItems = [...items].sort((a, b) => {
+        const sa = Number(a.sort_order || 9999)
+        const sb = Number(b.sort_order || 9999)
+        if (sa !== sb) return sa - sb
+        
+        const da = new Date(a.date).getTime()
+        const db = new Date(b.date).getTime()
+        return db - da
+      })
+
+      const rows = sortedItems.map((it: any, i: number) => {
         const subs = Array.isArray(it.sub_items) ? it.sub_items : []
         const subTotal = subs.length
         const subError = subs.filter((sub: any) => sub.status === 'error').length
 
         // Render sub-items rows if any
         let subItemsHtml = ''
-        let subsNotes = ''
         if (subs.length > 0) {
-          subsNotes = subs.map((sub: any) => {
-            let line = `- ${sub.title}: ${statusLabels[sub.status] || sub.status}`
-            if (sub.result) line += ` (${sub.result})`
-            return line
-          }).join('\n')
-
           const subRows = subs.map((sub: any, subIdx: number) => {
             const hasError = !!sub.error_details
             const ed = sub.error_details || {}
@@ -381,7 +400,10 @@ export function registerExportHandlers() {
         }
 
         const checkTime = it.check_time || it.updated_at || it.created_at
-        const displayNotes = [it.notes, subsNotes].filter(Boolean).join('\n')
+        
+        // Generate a fresh subsNotes for THIS item only
+        const itemSubs = Array.isArray(it.sub_items) ? it.sub_items : []
+        const displayNotes = it.notes || ''
         
         return `
         <tr>

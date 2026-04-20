@@ -41,6 +41,7 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
     assigned_user_id: editTemplate?.assigned_user_id || '',
     priority: editTemplate?.priority || 'normal',
     is_active: editTemplate ? editTemplate.is_active : 1,
+    sort_order: editTemplate?.sort_order ?? sortOrder,
   })
 
   // Keep session alive while form is open
@@ -149,7 +150,7 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
         priority: form.priority as 'normal' | 'low' | 'high',
         category_id: form.category_id || null,
         assigned_user_id: form.assigned_user_id || null,
-        sort_order: editTemplate ? editTemplate.sort_order : sortOrder,
+        sort_order: Number(form.sort_order),
         sub_items: subItems,
       }
       
@@ -271,7 +272,7 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <div className="form-group">
                 <label className="form-label">Ưu Tiên</label>
                 <select className="form-select" value={form.priority} disabled={submitting}
@@ -288,6 +289,14 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
                   <option value={1}>✅ Đang hoạt động</option>
                   <option value={0}>⭕ Tạm tắt</option>
                 </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Thứ Tự (Sort)</label>
+                <input 
+                  type="number" className="form-input" placeholder="0"
+                  value={form.sort_order} 
+                  onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} 
+                  disabled={submitting} />
               </div>
             </div>
           </div>

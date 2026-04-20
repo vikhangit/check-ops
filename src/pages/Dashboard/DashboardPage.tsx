@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { useAppStore } from '../../store/useAppStore'
 import { useDataStore } from '../../store/useDataStore'
+import { useChecklistStore } from '../../store/useChecklistStore'
 import { supabase, safeAuthQuery } from '../../lib/supabase'
 
 import type { StatsResult } from '../../types/electron'
@@ -21,6 +22,7 @@ const STATUS_COLORS = {
 export function DashboardPage() {
   const navigate = useNavigate()
   const { toast } = useAppStore()
+  const { setCurrentDate, setFilters } = useChecklistStore()
   const { dashboardStats: stats, dashboardPeriod: period, setDashboardStats: setStats, setDashboardPeriod: setPeriod } = useDataStore()
   const [loading, setLoading] = useState(false)   // Start false — show cached or empty immediately
   const [error, setError] = useState<string | null>(null)
@@ -237,6 +239,10 @@ export function DashboardPage() {
               label="Tổng Checklist"
               value={stats?.summary.total || 0}
               color="var(--c-primary)"
+              onClick={() => {
+                setCurrentDate(new Date().toISOString().split('T')[0])
+                navigate('/checklist')
+              }}
             />
             <StatCard
               icon="✅"
@@ -244,6 +250,11 @@ export function DashboardPage() {
               value={stats?.summary.done || 0}
               color="var(--c-success)"
               sub={`${completionRate}% tỷ lệ`}
+              onClick={() => {
+                setCurrentDate(new Date().toISOString().split('T')[0])
+                setFilters({ status: 'done' })
+                navigate('/checklist')
+              }}
             />
             <StatCard
               icon="❌"
@@ -251,12 +262,22 @@ export function DashboardPage() {
               value={(stats as any)?.subItemErrorUnresolved || 0}
               color="var(--c-danger)"
               sub={(stats as any)?.subItemErrorResolved > 0 ? `Đã xử lý: ${(stats as any).subItemErrorResolved}` : undefined}
+              onClick={() => {
+                setCurrentDate(new Date().toISOString().split('T')[0])
+                setFilters({ status: 'error' })
+                navigate('/checklist')
+              }}
             />
             <StatCard
               icon="⏳"
               label="Chưa Xử Lý"
               value={(stats?.summary.pending || 0) + (stats?.summary.in_progress || 0)}
               color="var(--c-warning)"
+              onClick={() => {
+                setCurrentDate(new Date().toISOString().split('T')[0])
+                setFilters({ status: 'pending' })
+                navigate('/checklist')
+              }}
             />
           </div>
 
@@ -371,7 +392,24 @@ export function DashboardPage() {
                 {stats.byCategory.map((cat, i) => {
                   const rate = cat.total ? Math.round((cat.done / cat.total) * 100) : 0
                   return (
-                    <div key={i} className={styles.categoryRow}>
+                    <div 
+                      key={i} 
+                      className={styles.categoryRow}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        setCurrentDate(new Date().toISOString().split('T')[0])
+                        // Assuming the category name can be used for search or we find ID
+                        // Looking at the data load, we have category objects with name
+                        // Let's try to find if we can filter by category_id
+                        const catObj = (stats as any)?._rawItems?.find((it: any) => it.category?.name === cat.name)?.category
+                        if (catObj?.id) {
+                          setFilters({ category_id: catObj.id })
+                        } else {
+                          setFilters({ search: cat.name })
+                        }
+                        navigate('/checklist')
+                      }}
+                    >
                       <div className={styles.categoryInfo}>
                         <span className={styles.catIcon}>{cat.icon}</span>
                         <span className={styles.catName}>{cat.name || 'Khác'}</span>
@@ -395,7 +433,7 @@ export function DashboardPage() {
 
           {/* Pending Errors Panel — Alert Style */}
           {(stats as any)?.subItemErrorUnresolved > 0 && (() => {
-            type ErrorEntry = { parentTitle: string; subTitle: string; reported_to: string; handled_by: string; reported_at?: string }
+            type ErrorEntry = { parentTitle: string; subTitle: string; reported_to: string; handled_by: string; reported_at?: string; itemDate: string }
             const pendingErrors: ErrorEntry[] = []
             ;(stats as any)?._rawItems?.forEach((item: any) => {
               (item.sub_items || []).forEach((sub: any) => {
@@ -405,7 +443,8 @@ export function DashboardPage() {
                     subTitle: sub.title,
                     reported_to: sub.error_details.reported_to,
                     handled_by: sub.error_details.handled_by,
-                    reported_at: sub.error_details.reported_at
+                    reported_at: sub.error_details.reported_at,
+                    itemDate: item.date
                   })
                 }
               })
@@ -430,19 +469,29 @@ export function DashboardPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {pendingErrors.map((e, i) => (
-                    <div key={i} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '10px 14px',
-                      background: 'rgba(239,68,68,0.1)',
-                      border: '1px solid rgba(239,68,68,0.2)',
-                      borderRadius: 8,
-                      fontSize: 13
-                    }}>
+                    <div 
+                      key={i} 
+                      onClick={() => {
+                        setCurrentDate(e.itemDate)
+                        setFilters({ search: e.parentTitle })
+                        navigate('/checklist')
+                      }}
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '10px 14px',
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.2)',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        cursor: 'pointer'
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
                         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{e.parentTitle}</span>
                         <span style={{ color: '#ef4444', fontSize: 11 }}>›</span>
                         <span style={{ color: '#fca5a5' }}>{e.subTitle}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({e.itemDate})</span>
                       </div>
                       <div style={{ display: 'flex', gap: 14, fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>
                         {e.reported_to && <span>📢 <strong>{e.reported_to}</strong></span>}
@@ -465,15 +514,20 @@ export function DashboardPage() {
   )
 }
 
-function StatCard({ icon, label, value, color, sub }: {
+function StatCard({ icon, label, value, color, sub, onClick }: {
   icon: string
   label: string
   value: number
   color: string
   sub?: string
+  onClick?: () => void
 }) {
   return (
-    <div className={styles.statCard} style={{ '--card-color': color } as React.CSSProperties}>
+    <div 
+      className={`${styles.statCard} ${onClick ? styles.statCardClickable : ''}`} 
+      style={{ '--card-color': color } as React.CSSProperties}
+      onClick={onClick}
+    >
       <div className={styles.statIcon}>{icon}</div>
       <div className={styles.statBody}>
         <span className={styles.statValue}>{value.toLocaleString()}</span>

@@ -136,10 +136,10 @@ export function ChecklistPage() {
   // Compute parent status from sub-items
   const computeParentStatus = (subItems: SubItem[]): string => {
     if (subItems.length === 0) return 'pending'
+    const hasError = subItems.some(s => s.status === 'error')
+    if (hasError) return 'error'
     const allDone = subItems.every(s => s.status === 'done')
     if (allDone) return 'done'
-    const hasError = subItems.some(s => s.status === 'error')
-    if (hasError) return 'in_progress'
     const hasInProgress = subItems.some(s => s.status === 'in_progress')
     if (hasInProgress) return 'in_progress'
     return 'pending'

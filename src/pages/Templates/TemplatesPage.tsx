@@ -12,7 +12,7 @@ import styles from './TemplatesPage.module.css'
 export function TemplatesPage() {
   const { currentUser } = useUserStore()
   const { toast } = useAppStore()
-  const { templates, categories, users, loadTemplates } = useDataStore()
+  const { templates, categories, users, loadTemplates, reorderTemplates } = useDataStore()
   const [localTemplates, setLocalTemplates] = useState<ChecklistTemplate[]>([])
   const [synced, setSynced] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -167,7 +167,7 @@ export function TemplatesPage() {
             assigned_user_id,
             priority: template.priority,
             is_active: template.is_active,
-            sort_order: templates.length + successCount,
+            sort_order: template.sort_order,
             sub_items: template.sub_items,
           }
 
@@ -217,6 +217,20 @@ export function TemplatesPage() {
     }
   }
 
+  const handleFixOrder = async () => {
+    if (displayTemplates.length === 0) return
+    setRefreshing(true)
+    try {
+      const ids = displayTemplates.map(t => t.id)
+      await reorderTemplates(ids)
+      toast.success('Đã chuẩn hoá thứ tự hiển thị')
+    } catch (err: any) {
+      toast.error('Lỗi khi chuẩn hoá: ' + err.message)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const activeCount = displayTemplates.filter((t) => t.is_active).length
 
   return (
@@ -253,6 +267,16 @@ export function TemplatesPage() {
           >
             📥 Import Excel
           </button>
+          {(currentUser?.role === 'admin' || currentUser?.permissions?.templates?.edit) && displayTemplates.length > 0 && (
+            <button 
+              className="btn btn-outline" 
+              onClick={handleFixOrder}
+              disabled={refreshing}
+              title="Sắp xếp lại thứ tự từ 1 đến N dựa trên danh sách đang hiển thị"
+            >
+              🔢 Chuẩn Hoá Thứ Tự
+            </button>
+          )}
           {(currentUser?.role === 'admin' || currentUser?.permissions?.templates?.add) && (
             <button className="btn btn-primary" onClick={openCreate}>
               ➕ Thêm Template
@@ -280,7 +304,7 @@ export function TemplatesPage() {
           {displayTemplates.map((tpl, idx) => (
             <div key={tpl.id} className={`card ${styles.card} ${!tpl.is_active ? styles.cardInactive : ''}`}>
               <div className={styles.cardTop}>
-                <span className={styles.cardNum}>{idx + 1}</span>
+                <span className={styles.cardNum}>{tpl.sort_order}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className={styles.cardTitle}>{tpl.title}</div>
                   {tpl.description && (
