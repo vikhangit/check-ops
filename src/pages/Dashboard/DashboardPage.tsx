@@ -241,6 +241,7 @@ export function DashboardPage() {
               color="var(--c-primary)"
               onClick={() => {
                 setCurrentDate(new Date().toISOString().split('T')[0])
+                setFilters({ status: '' })
                 navigate('/checklist')
               }}
             />

@@ -199,6 +199,7 @@ export function ReportsPage() {
     reported_at?: string
     resolved_at?: string
     is_resolved: boolean
+    status: string
   }
   const subErrorRows: SubErrorRow[] = []
   items.forEach(item => {
@@ -212,8 +213,9 @@ export function ReportsPage() {
           reported_to: sub.error_details.reported_to,
           handled_by: sub.error_details.handled_by,
           reported_at: sub.error_details.reported_at,
-          resolved_at: sub.error_details.resolved_at,
-          is_resolved: sub.error_details.is_resolved,
+          resolved_at: sub.error_details.resolved_at || (sub.status === 'done' ? sub.end_time : undefined),
+          is_resolved: sub.error_details.is_resolved || sub.status === 'done',
+          status: sub.status
         })
       }
     })

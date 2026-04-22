@@ -67,6 +67,7 @@ export function ChecklistPage() {
     
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
+      if (target.closest('.modal')) return
       if (!target.closest(`.${styles.statusDropdownWrapper}`)) {
         setStatusDropdownId(null)
         setSubStatusDropdownId(null)
@@ -212,6 +213,15 @@ export function ChecklistPage() {
       if (s.id === subId) {
         const updatedSub = { ...s, status: status as any, result: resultText }
         
+        // Nếu chuyển sang Hoàn thành và trước đó đang bị Lỗi, tự động resolve lỗi luôn
+        if (status === 'done' && s.error_details && !s.error_details.is_resolved) {
+          updatedSub.error_details = {
+            ...s.error_details,
+            is_resolved: true,
+            resolved_at: now
+          }
+        }
+
         // Ghi nhận thời gian bắt đầu cho mục con
         if (status === 'in_progress' && !s.start_time) {
           updatedSub.start_time = now
@@ -771,7 +781,7 @@ export function ChecklistPage() {
       {/* Duplicate Modal */}
       {showDuplicateModal && (
         <div className="modal-overlay" onClick={() => setShowDuplicateModal(false)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 400 }} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">📋 Sao Chép Từ Ngày Khác</h3>
               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowDuplicateModal(false)}>✕</button>
@@ -800,7 +810,7 @@ export function ChecklistPage() {
       {/* Notes Modal */}
       {notesModalItem && (
         <div className="modal-overlay" onClick={() => setNotesModalItem(null)}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 440 }} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">💬 Ghi Chú</h3>
               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setNotesModalItem(null)}>✕</button>
@@ -830,7 +840,7 @@ export function ChecklistPage() {
       {/* SubItem Error Details Modal */}
       {errorModalSubItem && (
         <div className="modal-overlay" onClick={() => setErrorModalSubItem(null)}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 440 }} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title" style={{ color: 'var(--error-color)' }}>❌ Báo Nhận Lỗi Mục Con</h3>
               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setErrorModalSubItem(null)}>✕</button>
@@ -898,7 +908,7 @@ export function ChecklistPage() {
       {/* Result Modal for SubItems */}
       {resultModalSubItem && (
         <div className="modal-overlay" onClick={() => setResultModalSubItem(null)}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 440 }} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">📝 Kết Quả Công Việc</h3>
               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setResultModalSubItem(null)}>✕</button>

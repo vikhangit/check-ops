@@ -139,7 +139,7 @@ body {
   line-height: 1.5;
   overflow: hidden;
   height: 100vh;
-  user-select: none;
+  user-select: auto;
 }
 
 input, textarea, [contenteditable="true"], select {

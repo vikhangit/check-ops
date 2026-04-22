@@ -38,7 +38,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
   channel: null,
 
   setCurrentDate: (date) => {
-    set({ currentDate: date, filters: {} })
+    set({ currentDate: date })
     get().fetchByDate(date)
     get().subscribeToChanges(date)
   },

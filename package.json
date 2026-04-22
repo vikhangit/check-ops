@@ -1,8 +1,8 @@
 {
   "name": "quan-ly-checklist",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Developer",
-  "description": "CheckOps v6 - Quản Lý Vận Hành",
+  "description": "CheckOps - Quản Lý Vận Hành",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"npm run dev:vite\" \"npm run dev:electron\"",
@@ -64,14 +64,15 @@
         "provider": "github",
         "owner": "vikhangit",
         "repo": "check-ops",
-        "channel": "latest"
+        "channel": "latest",
+        "releaseType": "release"
       }
     ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
     ],
-    "productName": "CheckOps v6",
-    "copyright": "Copyright © 2026 CheckOps v6"
+    "productName": "CheckOps",
+    "copyright": "Copyright © 2026 CheckOps"
   }
 }

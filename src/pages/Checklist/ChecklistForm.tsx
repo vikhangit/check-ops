@@ -77,13 +77,28 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
 
     setLoading(true)
     try {
+      const now = new Date().toISOString()
+      const processedSubItems = subItems.map(s => {
+        if (s.status === 'done' && s.error_details && !s.error_details.is_resolved) {
+          return {
+            ...s,
+            error_details: {
+              ...s.error_details,
+              is_resolved: true,
+              resolved_at: s.error_details.resolved_at || now
+            }
+          }
+        }
+        return s
+      })
+
       const data = {
         ...form,
         category_id: form.category_id || undefined,
         assigned_user_id: form.assigned_user_id || undefined,
         notes: form.notes || undefined,
         created_by: currentUser?.id,
-        sub_items: subItems,
+        sub_items: processedSubItems,
       }
 
       if (isEditing && item) {
@@ -105,7 +120,7 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 640 }} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">
             {isEditing ? '✏️ Chỉnh Sửa Công Việc' : '➕ Thêm Công Việc Mới'}
