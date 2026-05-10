@@ -47,6 +47,13 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
 
   const isEditing = !!item
 
+  const formatInputDate = (dateStr: string) => {
+    if (!dateStr) return ''
+    const [y, m, d] = dateStr.split('-')
+    if (!y || !m || !d) return dateStr
+    return `${d}/${m}/${y}`
+  }
+
   const setField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
@@ -277,6 +284,7 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
                   type="date"
                   className="form-input"
                   value={form.date}
+                  data-date={formatInputDate(form.date)}
                   onChange={(e) => setField('date', e.target.value)}
                 />
               </div>
