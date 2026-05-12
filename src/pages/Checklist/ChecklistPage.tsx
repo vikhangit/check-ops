@@ -59,6 +59,7 @@ export function ChecklistPage() {
   const [errorForm, setErrorForm] = useState({ description: '', reported_to: '', handled_by: '', is_resolved: false })
   const [resultModalSubItem, setResultModalSubItem] = useState<{ item: ChecklistItem; subId: string; status: string; } | null>(null)
   const [resultText, setResultText] = useState('')
+  const [resultNotes, setResultNotes] = useState('')
 
   useEffect(() => {
     fetchByDate(currentDate)
@@ -182,6 +183,7 @@ export function ChecklistPage() {
     if (newStatus === 'done') {
       setResultModalSubItem({ item, subId, status: newStatus })
       setResultText(targetSub.result || '')
+      setResultNotes(targetSub.notes || '')
       return
     }
 
@@ -211,7 +213,7 @@ export function ChecklistPage() {
     const now = new Date().toISOString()
     const newSubItems = item.sub_items.map(s => {
       if (s.id === subId) {
-        const updatedSub = { ...s, status: status as any, result: resultText }
+        const updatedSub = { ...s, status: status as any, result: resultText, notes: resultNotes }
         
         // Nếu chuyển sang Hoàn thành và trước đó đang bị Lỗi, tự động resolve lỗi luôn
         if (status === 'done' && s.error_details && !s.error_details.is_resolved) {
@@ -246,6 +248,7 @@ export function ChecklistPage() {
     
     setResultModalSubItem(null)
     setResultText('')
+    setResultNotes('')
     toast.success('Đã cập nhật kết quả')
   }
 
@@ -315,7 +318,10 @@ export function ChecklistPage() {
     if (!duplicateFromDateStr) { toast.error('Chọn ngày muốn sao chép'); return }
     const count = await duplicateFromDate(duplicateFromDateStr)
     setShowDuplicateModal(false)
-    if (count > 0) toast.success(`Đã sao chép ${count} công việc từ ${duplicateFromDateStr}`)
+    if (count > 0) {
+      const formattedSource = duplicateFromDateStr.split('-').reverse().join('/')
+      toast.success(`Đã sao chép ${count} công việc từ ${formattedSource}`)
+    }
     else toast.info('Ngày hôm nay đã có dữ liệu, không sao chép')
   }
 
@@ -345,8 +351,15 @@ export function ChecklistPage() {
   }
 
   const displayDate = new Date(currentDate + 'T00:00:00').toLocaleDateString('vi-VN', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    day: '2-digit', month: '2-digit', year: 'numeric'
   })
+
+  const formatInputDate = (dateStr: string) => {
+    if (!dateStr) return ''
+    const [y, m, d] = dateStr.split('-')
+    if (!y || !m || !d) return dateStr
+    return `${d}/${m}/${y}`
+  }
 
   const hasActiveFilters = !!(filters.status || filters.category_id || filters.assigned_user_id || filters.search)
 
@@ -369,6 +382,7 @@ export function ChecklistPage() {
             type="date"
             className={styles.datePicker}
             value={currentDate}
+            data-date={formatInputDate(currentDate)}
             onChange={(e) => e.target.value && setCurrentDate(e.target.value)}
           />
         </div>
@@ -795,6 +809,7 @@ export function ChecklistPage() {
                 type="date"
                 className="form-input"
                 value={duplicateFromDateStr}
+                data-date={formatInputDate(duplicateFromDateStr)}
                 max={today}
                 onChange={(e) => setDuplicateFromDateStr(e.target.value)}
               />
@@ -927,6 +942,16 @@ export function ChecklistPage() {
                 onChange={(e) => setResultText(e.target.value)}
                 autoFocus
                 required
+              />
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Ghi Chú</label>
+              <textarea
+                className="form-textarea"
+                rows={2}
+                placeholder="Nhập ghi chú (không bắt buộc)..."
+                value={resultNotes}
+                onChange={(e) => setResultNotes(e.target.value)}
               />
             </div>
             <div className="modal-footer">

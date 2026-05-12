@@ -383,7 +383,10 @@ export function registerExportHandlers() {
               <tr style="background-color: #fdfdfd; font-size: 10px;">
                 <td style="text-align: center; width: 30px; border-left: 3px solid #cbd5e1;">${i + 1}.${subIdx + 1}</td>
                 <td colspan="2" style="padding-left: 20px;">└─ ${esc(sub.title)}</td>
-                <td colspan="3" style="color: #64748b;">${hasError ? `<span style="color: #ef4444;">⚠ Lỗi:</span> ${esc(ed.description)}` : ''}</td>
+                <td colspan="3" style="color: #64748b;">
+                  ${sub.result ? `<span style="color: #059669; font-weight: 600;">kết quả:</span> ${esc(sub.result)}` : ''}
+                  ${hasError ? `${sub.result ? '<br/>' : ''}<span style="color: #ef4444; font-weight: 600;">⚠ Lỗi:</span> ${esc(ed.description)}` : ''}
+                </td>
                 <td style="text-align: center;">
                   <span class="badge" style="background-color: ${statusColors[sub.status] || '#94a3b8'}; font-size: 8px; width: 70px; padding: 2px 0;">
                     ${(statusLabels[sub.status] || sub.status).replace(/&nbsp;/g, ' ')}
@@ -391,7 +394,7 @@ export function registerExportHandlers() {
                 </td>
                 <td style="width: 70px;"></td>
                 <td style="width: 100px; text-align: left; font-size: 8px; color: #64748b; white-space: pre-wrap;">${esc(subCheckTime)}</td>
-                <td style="width: 140px; font-size: 9px; color: #64748b; white-space: pre-wrap;">${esc(sub.result)}</td>
+                <td style="width: 140px; font-size: 9px; color: #64748b; white-space: pre-wrap;">${esc(sub.notes)}</td>
                 <td colspan="2"></td>
               </tr>
             `

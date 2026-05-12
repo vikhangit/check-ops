@@ -299,6 +299,36 @@ a {
   min-height: 80px;
 }
 
+/* ── Date Input Force Format dd/MM/yyyy ── */
+input[type="date"] {
+  position: relative;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  z-index: 2;
+}
+
+input[type="date"]::before {
+  content: attr(data-date);
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-input);
+  width: calc(100% - 40px);
+  pointer-events: none;
+  z-index: 1;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+}
+
+input[type="date"]:invalid::before {
+  content: "dd/mm/yyyy";
+  color: var(--text-muted);
+}
+
 /* ── Card ── */
 .card {
   background: var(--bg-card);

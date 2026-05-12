@@ -5,6 +5,9 @@ import { setupAutoUpdater } from './autoUpdater'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
+// Force Vietnamese locale for date pickers and system UI
+app.commandLine.appendSwitch('lang', 'vi')
+
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {

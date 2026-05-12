@@ -51,7 +51,7 @@ export function Sidebar() {
         </div>
         <div className={styles.logoText}>
           <span className={styles.logoTitle}>CheckOps</span>
-          <span className={styles.logoSub}>v5.0 Vận Hành</span>
+          <span className={styles.logoSub}>v1 Vận Hành</span>
         </div>
       </div>
 

@@ -19,10 +19,9 @@ export function Header() {
   const now = new Date()
 
   const dateStr = now.toLocaleDateString('vi-VN', {
-    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
   })
 
   return (

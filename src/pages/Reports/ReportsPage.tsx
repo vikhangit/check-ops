@@ -118,8 +118,10 @@ export function ReportsPage() {
     const exportId = Math.random().toString(36).substring(7)
     
     try {
-      const dateRange = `${filters.dateFrom} den ${filters.dateTo}`
-      const title = `Bao Cao Van Hanh CheckOps (${filters.dateFrom} - ${filters.dateTo})`
+      const df = formatDate(filters.dateFrom)
+      const dt = formatDate(filters.dateTo)
+      const dateRange = `${df} den ${dt}`
+      const title = `Bao Cao Van Hanh CheckOps (${df} - ${dt})`
       
       // Serialize items fully to plain objects (avoid proxy/class issues through IPC)
       const plainItems = JSON.parse(JSON.stringify(items))
@@ -149,8 +151,10 @@ export function ReportsPage() {
     const exportId = Math.random().toString(36).substring(7)
     
     try {
-      const dateRange = `${filters.dateFrom} den ${filters.dateTo}`
-      const title = `Bao Cao Van Hanh CheckOps (${filters.dateFrom} - ${filters.dateTo})`
+      const df = formatDate(filters.dateFrom)
+      const dt = formatDate(filters.dateTo)
+      const dateRange = `${df} den ${dt}`
+      const title = `Bao Cao Van Hanh CheckOps (${df} - ${dt})`
       toast.info('Dang tao PDF, vui long cho...')
       
       // Use items from state directly - it is already a plain array of objects
@@ -249,6 +253,13 @@ export function ReportsPage() {
     pending: 'Chưa làm', in_progress: 'Đang làm', done: 'Hoàn thành', error: 'Lỗi',
   }
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '—'
+    const parts = dateStr.split('-')
+    if (parts.length !== 3) return dateStr
+    return `${parts[2]}/${parts[1]}/${parts[0]}`
+  }
+
   return (
     <div className={styles.page}>
       {/* Filter Panel */}
@@ -258,12 +269,16 @@ export function ReportsPage() {
           <div className="form-group">
             <label className="form-label">Từ Ngày</label>
             <input type="date" className="form-input"
-              value={filters.dateFrom} onChange={(e) => setFilter('dateFrom', e.target.value)} max={filters.dateTo} />
+              value={filters.dateFrom} 
+              data-date={formatDate(filters.dateFrom)}
+              onChange={(e) => setFilter('dateFrom', e.target.value)} max={filters.dateTo} />
           </div>
           <div className="form-group">
             <label className="form-label">Đến Ngày</label>
             <input type="date" className="form-input"
-              value={filters.dateTo} onChange={(e) => setFilter('dateTo', e.target.value)} min={filters.dateFrom} max={today} />
+              value={filters.dateTo} 
+              data-date={formatDate(filters.dateTo)}
+              onChange={(e) => setFilter('dateTo', e.target.value)} min={filters.dateFrom} max={today} />
           </div>
           <div className="form-group">
             <label className="form-label">Trạng Thái</label>
@@ -362,7 +377,7 @@ export function ReportsPage() {
                   {items.map((item, i) => (
                     <tr key={item.id} className={styles[`status_${item.status}`]}>
                       <td className={styles.numCell}>{i + 1}</td>
-                      <td>{item.date}</td>
+                      <td>{formatDate(item.date)}</td>
                       <td>
                         <div className={styles.titleMain} style={{ fontWeight: 500 }}>{item.title}</div>
                         {item.description && <div className={styles.titleSub}>{item.description}</div>}
@@ -425,7 +440,7 @@ export function ReportsPage() {
                     {subErrorRows.map((row, i) => (
                       <tr key={i} style={{ background: row.is_resolved ? undefined : 'rgba(239,68,68,0.07)' }}>
                         <td className={styles.numCell}>{i + 1}</td>
-                        <td style={{ fontSize: 12 }}>{row.date}</td>
+                        <td style={{ fontSize: 12 }}>{formatDate(row.date)}</td>
                         <td style={{ fontWeight: 600, fontSize: 12 }}>{row.parentTitle}</td>
                         <td style={{ fontSize: 12 }}>{row.subTitle}</td>
                         <td style={{ fontSize: 11, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.description}>{row.description}</td>
