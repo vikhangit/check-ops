@@ -96,10 +96,40 @@
   width: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border-strong);
-  border-radius: 20px;
+  border-radius: 24px;
   padding: 32px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: rgba(0,0,0,0.2);
+  padding: 4px;
+  border-radius: 14px;
+  margin-bottom: 24px;
+}
+
+.tab {
+  border: none;
+  background: transparent;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tabActive {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .cardHeader {

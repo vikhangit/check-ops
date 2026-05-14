@@ -23,6 +23,7 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
   const [subItems, setSubItems] = useState<SubItem[]>(editTemplate?.sub_items || [])
   const draftTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const hasLoadedDraft = useRef(false)
 
   // Force focus on mount to overcome focus/interaction lock in Electron
   useEffect(() => {
@@ -38,7 +39,8 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
     title: editTemplate?.title || '',
     description: editTemplate?.description || '',
     category_id: editTemplate?.category_id || '',
-    assigned_user_id: editTemplate?.assigned_user_id || '',
+    assigned_user_ids: editTemplate?.assigned_user_ids || [] as string[],
+    responsible_user_id: editTemplate?.responsible_user_id || '',
     priority: editTemplate?.priority || 'normal',
     is_active: editTemplate ? editTemplate.is_active : 1,
     sort_order: editTemplate?.sort_order ?? sortOrder,
@@ -49,16 +51,19 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
 
   // Load draft only for new templates
   useEffect(() => {
-    if (!editTemplate) {
+    if (!editTemplate && !hasLoadedDraft.current) {
+      hasLoadedDraft.current = true
       const draft = loadDraft()
       if (draft) {
         setForm({
           title: draft.title,
           description: draft.description,
           category_id: draft.category_id,
-          assigned_user_id: draft.assigned_user_id,
+          assigned_user_ids: draft.assigned_user_ids || [],
+          responsible_user_id: draft.responsible_user_id || '',
           priority: draft.priority,
           is_active: draft.is_active,
+          sort_order: (draft as any).sort_order ?? sortOrder,
         })
         setSubItems(draft.subItems.map(s => ({ 
           id: s.id, 
@@ -69,7 +74,7 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
         toast.info(`✅ Đã phục hồi bản nháp từ lúc ${new Date(draft.savedAt).toLocaleTimeString('vi-VN')}`)
       }
     }
-  }, [editTemplate, loadDraft, toast])
+  }, [editTemplate, loadDraft, toast, sortOrder])
 
   // Periodic save setup
   useEffect(() => {
@@ -83,7 +88,8 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
       title: form.title,
       description: form.description,
       category_id: form.category_id,
-      assigned_user_id: form.assigned_user_id,
+      assigned_user_ids: form.assigned_user_ids,
+      responsible_user_id: form.responsible_user_id,
       priority: form.priority as any,
       is_active: form.is_active,
       subItems: subItems.map(s => ({ id: s.id, title: s.title })),
@@ -149,7 +155,8 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
         is_active: !!form.is_active,
         priority: form.priority as 'normal' | 'low' | 'high',
         category_id: form.category_id || null,
-        assigned_user_id: form.assigned_user_id || null,
+        responsible_user_id: form.responsible_user_id || null,
+        assigned_user_ids: form.assigned_user_ids || [],
         sort_order: Number(form.sort_order),
         sub_items: subItems,
       }
@@ -201,12 +208,53 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
     }
   }
 
+  const toggleAssignee = (userId: string) => {
+    setForm(f => {
+      const ids = f.assigned_user_ids.includes(userId)
+        ? f.assigned_user_ids.filter(id => id !== userId)
+        : [...f.assigned_user_ids, userId]
+      return { ...f, assigned_user_ids: ids }
+    })
+  }
+
   return (
     <div className="modal-overlay" onClick={() => !submitting && onClose()} style={{ opacity: submitting ? 0.8 : 1 }}>
       <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">{editTemplate ? '✏️ Sửa Template' : '➕ Tạo Template Mới'}</h3>
-          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => !submitting && onClose()} disabled={submitting}>✕</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!editTemplate && (
+              <button 
+                type="button" 
+                className="btn btn-ghost btn-sm" 
+                style={{ color: 'var(--c-danger)', fontSize: 12 }}
+                disabled={submitting}
+                onClick={() => {
+                  if (window.confirm('Xoá bản nháp đang lưu và làm lại từ đầu?')) {
+                    clearDraft();
+                    setForm({
+                      title: '',
+                      description: '',
+                      category_id: '',
+                      assigned_user_ids: [],
+                      responsible_user_id: '',
+                      priority: 'normal',
+                      is_active: 1,
+                      sort_order: sortOrder,
+                    });
+                    setSubItems([]);
+                    // Force focus back to title input after clearing
+                    setTimeout(() => {
+                      titleInputRef.current?.focus();
+                    }, 100);
+                  }
+                }}
+              >
+                🗑️ Xoá nháp
+              </button>
+            )}
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => !submitting && onClose()} disabled={submitting}>✕</button>
+          </div>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, opacity: submitting ? 0.6 : 1 }}>
@@ -241,12 +289,38 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Người Phụ Trách</label>
-                <select className="form-select" value={form.assigned_user_id} disabled={submitting}
-                  onChange={(e) => setForm((f) => ({ ...f, assigned_user_id: e.target.value }))}>                    
-                  <option value="">— Chưa giao —</option>
+                <label className="form-label">Người Quản Lý (Template)</label>
+                <select className="form-select" value={form.responsible_user_id} disabled={submitting}
+                  onChange={(e) => setForm((f) => ({ ...f, responsible_user_id: e.target.value }))}>                    
+                  <option value="">— Chưa chọn —</option>
                   {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Người Thực Hiện (Nhiều người)</label>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+                gap: '8px',
+                padding: '12px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                maxHeight: '120px',
+                overflowY: 'auto'
+              }}>
+                {users.map((u) => (
+                  <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.assigned_user_ids.includes(u.id)}
+                      onChange={() => toggleAssignee(u.id)}
+                      disabled={submitting}
+                    />
+                    {u.name}
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -261,6 +335,20 @@ export function TemplateForm({ editTemplate, categories, users, onClose, onSucce
                     <span style={{ color: 'var(--text-secondary)', fontSize: 13, width: 20 }}>{index + 1}.</span>
                     <input type="text" className="form-input" style={{ flex: 1 }} placeholder="Tên mục con phân rã..."
                       value={sub.title} onChange={(e) => updateSubItem(sub.id, 'title', e.target.value)} required disabled={submitting} />
+                    
+                    <select 
+                      className="form-select" 
+                      style={{ width: 150, fontSize: 12 }}
+                      value={sub.assigned_user_id || ''} 
+                      onChange={(e) => updateSubItem(sub.id, 'assigned_user_id', e.target.value)}
+                      disabled={submitting}
+                    >
+                      <option value="">— Người thực hiện —</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+
                     <button type="button" className="btn btn-ghost btn-icon" onClick={() => removeSubItem(sub.id)} title="Xoá" disabled={submitting}>✕</button>
                   </div>
                 ))}

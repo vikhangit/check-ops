@@ -79,19 +79,22 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
             const { data: item } = await safeAuthQuery(async () => {
                const { data, error } = await supabase
                 .from('checklist_items')
-                .select('*, category:categories(*), assigned_user:profiles!checklist_items_assigned_user_id_fkey(*)')
+                .select('*, category:categories(*)')
                 .eq('id', newId)
                 .single()
                if (error) throw error
                return data
             })
             if (item) {
+              const { data: profiles } = await supabase.from('profiles').select('id, name')
+              const userMap = new Map((profiles || []).map((p: any) => [p.id, p.name]))
+              
               const mapped = {
                 ...(item as any),
                 category_name: (item as any).category?.name,
                 category_color: (item as any).category?.color,
                 category_icon: (item as any).category?.icon,
-                assigned_user_name: (item as any).assigned_user?.name
+                assigned_user_names: (item as any).assigned_user_ids?.map((uid: string) => userMap.get(uid)).filter(Boolean) || []
               }
               set(state => ({ items: [...state.items.filter(i => i.id !== mapped.id), mapped] }))
             }
@@ -99,6 +102,8 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
             set(state => ({
               items: state.items.map(i => i.id === newId ? { ...i, ...payload.new } : i)
             }))
+            // Note: assigned_user_names might be out of sync if assigned_user_ids changed via realtime
+            // but usually update is partial or we might need a full refresh if names are critical
           } else if (payload.eventType === 'DELETE' && oldId) {
             set(state => ({
               items: state.items.filter(i => i.id !== oldId)
@@ -134,8 +139,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
           .from('checklist_items')
           .select(`
             *,
-            category:categories(*),
-            assigned_user:profiles!checklist_items_assigned_user_id_fkey(*)
+            category:categories(*)
           `)
           .eq('date', date)
           .order('sort_order', { ascending: true })
@@ -148,6 +152,10 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
       const { data, error } = safeResult
       if (error) throw error
 
+      // Fetch profiles for mapping names
+      const { data: profiles } = await supabase.from('profiles').select('id, name')
+      const userMap = new Map((profiles || []).map((p: any) => [p.id, p.name]))
+
       clearTimeout(timeout)
 
       const itemsArray = (data as any[]) || []
@@ -156,7 +164,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
         category_name: item.category?.name,
         category_color: item.category?.color,
         category_icon: item.category?.icon,
-        assigned_user_name: item.assigned_user?.name
+        assigned_user_names: (item.assigned_user_ids || []).map((uid: string) => userMap.get(uid)).filter(Boolean)
       }))
 
       set({ items: mapped, currentDate: date, lastLoadedDate: date })
@@ -176,13 +184,13 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
           .from('checklist_items')
           .select(`
             *,
-            category:categories(*),
-            assigned_user:profiles!checklist_items_assigned_user_id_fkey(*)
+            category:categories(*)
           `)
 
         if (filters?.date) query = query.eq('date', filters.date)
         if (filters?.status) query = query.eq('status', filters.status)
         if (filters?.category_id) query = query.eq('category_id', filters.category_id)
+        if (filters?.assigned_user_id) query = query.contains('assigned_user_ids', [filters.assigned_user_id])
         
         const { data, error } = await query.order('date', { ascending: false })
         if (error) throw error
@@ -192,13 +200,16 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
       const { data, error } = safeResult
       if (error) throw error
 
+      const { data: profiles } = await supabase.from('profiles').select('id, name')
+      const userMap = new Map((profiles || []).map((p: any) => [p.id, p.name]))
+
       set({ 
         items: ((data as any[]) || []).map(item => ({
           ...item,
           category_name: item.category?.name,
           category_color: item.category?.color,
           category_icon: item.category?.icon,
-          assigned_user_name: item.assigned_user?.name
+          assigned_user_names: (item.assigned_user_ids || []).map((uid: string) => userMap.get(uid)).filter(Boolean)
         })) as any
       })
     } catch (error) {
@@ -218,7 +229,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
             title: data.title,
             description: data.description,
             category_id: data.category_id,
-            assigned_user_id: data.assigned_user_id,
+            assigned_user_ids: data.assigned_user_ids || [],
             status: data.status || 'pending',
             date: data.date,
             priority: data.priority || 'normal',
@@ -372,7 +383,8 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
           title: item.title,
           description: item.description,
           category_id: item.category_id,
-          assigned_user_id: item.assigned_user_id,
+          assigned_user_ids: item.assigned_user_ids || [],
+          responsible_user_id: item.responsible_user_id,
           status: 'pending',
           date: currentDate,
           priority: item.priority,
@@ -418,7 +430,8 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
           title: tpl.title,
           description: tpl.description,
           category_id: tpl.category_id,
-          assigned_user_id: tpl.assigned_user_id,
+          assigned_user_ids: tpl.assigned_user_ids || [],
+          responsible_user_id: tpl.responsible_user_id, // Ghi nhận người chịu trách nhiệm từ template
           status: 'pending',
           date: currentDate,
           priority: tpl.priority,

@@ -162,6 +162,15 @@
 .row_in_progress { border-left: 3px solid var(--c-warning); }
 .row_pending { border-left: 3px solid transparent; }
 
+.notEditable {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.notEditable .actions {
+  pointer-events: auto; /* Allow some actions if needed, or keep disabled */
+}
+
 .expandedParent {
   background: rgba(99, 102, 241, 0.03);
 }

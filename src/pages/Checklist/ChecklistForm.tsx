@@ -36,12 +36,21 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
     title: item?.title || '',
     description: item?.description || '',
     category_id: item?.category_id || '',
-    assigned_user_id: item?.assigned_user_id || '',
+    assigned_user_ids: item?.assigned_user_ids || [] as string[],
     status: item?.status || 'pending',
     priority: item?.priority || 'normal',
     notes: item?.notes || '',
     date: item?.date || date,
   })
+
+  const toggleAssignee = (userId: string) => {
+    setForm(f => {
+      const ids = f.assigned_user_ids.includes(userId)
+        ? f.assigned_user_ids.filter(id => id !== userId)
+        : [...f.assigned_user_ids, userId]
+      return { ...f, assigned_user_ids: ids }
+    })
+  }
 
   const [subItems, setSubItems] = useState<SubItem[]>(item?.sub_items || [])
 
@@ -102,7 +111,8 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
       const data = {
         ...form,
         category_id: form.category_id || undefined,
-        assigned_user_id: form.assigned_user_id || undefined,
+        assigned_user_ids: form.assigned_user_ids || [],
+        responsible_user_id: item?.responsible_user_id, // Giữ nguyên người quản lý template
         notes: form.notes || undefined,
         created_by: currentUser?.id,
         sub_items: processedSubItems,
@@ -162,40 +172,49 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="form-group">
-                <label className="form-label">Danh Mục</label>
-                <select
-                  className="form-select"
-                  value={form.category_id}
-                  onChange={(e) => setField('category_id', e.target.value)}
-                >
-                  <option value="">— Chọn danh mục —</option>
-                  <optgroup label="Hệ Thống Nền Tảng">
-                    {categories.filter((c) => c.group_type === 'system').map((c) => (
-                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Phản Hồi Khách Hàng">
-                    {categories.filter((c) => c.group_type === 'customer').map((c) => (
-                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                    ))}
-                  </optgroup>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Người Phụ Trách</label>
-                <select
-                  className="form-select"
-                  value={form.assigned_user_id}
-                  onChange={(e) => setField('assigned_user_id', e.target.value)}
-                >
-                  <option value="">— Chưa giao —</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
+            <div className="form-group">
+              <label className="form-label">Danh Mục</label>
+              <select
+                className="form-select"
+                value={form.category_id}
+                onChange={(e) => setField('category_id', e.target.value)}
+              >
+                <option value="">— Chọn danh mục —</option>
+                <optgroup label="Hệ Thống Nền Tảng">
+                  {categories.filter((c) => c.group_type === 'system').map((c) => (
+                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                   ))}
-                </select>
+                </optgroup>
+                <optgroup label="Phản Hồi Khách Hàng">
+                  {categories.filter((c) => c.group_type === 'customer').map((c) => (
+                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Người Thực Hiện (Nhiều người)</label>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+                gap: '8px',
+                padding: '12px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                maxHeight: '120px',
+                overflowY: 'auto'
+              }}>
+                {users.map((u) => (
+                  <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.assigned_user_ids.includes(u.id)}
+                      onChange={() => toggleAssignee(u.id)}
+                    />
+                    {u.name}
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -222,7 +241,18 @@ export function ChecklistForm({ item, date, categories, users, onClose }: Props)
                     />
                     <select 
                       className="form-select" 
-                      style={{ width: 140 }}
+                      style={{ width: 120, fontSize: 12 }}
+                      value={sub.assigned_user_id || ''} 
+                      onChange={(e) => updateSubItem(sub.id, 'assigned_user_id', e.target.value)}
+                    >
+                      <option value="">— Nhân sự —</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                    <select 
+                      className="form-select" 
+                      style={{ width: 130 }}
                       value={sub.status}
                       onChange={(e) => updateSubItem(sub.id, 'status', e.target.value)}
                     >

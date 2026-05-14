@@ -40,17 +40,16 @@ export function ReportsPage() {
           .from('checklist_items')
           .select(`
             id, title, description, date, status, priority, notes, check_time,
-            sort_order, sub_items, category_id, assigned_user_id, created_at, template_id,
+            sort_order, sub_items, category_id, assigned_user_ids, created_at, template_id,
             category:categories(id, name, color, icon),
-            assigned_user:profiles!checklist_items_assigned_user_id_fkey(id, name, role),
-            template:checklist_templates(sort_order)
+            template:checklist_templates(sort_order, responsible_user_id)
           `)
           .gte('date', currentFilters.dateFrom)
           .lte('date', currentFilters.dateTo)
 
         if (currentFilters.status) query = query.eq('status', currentFilters.status)
         if (currentFilters.category_id) query = query.eq('category_id', currentFilters.category_id)
-        if (currentFilters.assigned_user_id) query = query.eq('assigned_user_id', currentFilters.assigned_user_id)
+        if (currentFilters.assigned_user_id) query = query.contains('assigned_user_ids', [currentFilters.assigned_user_id])
         
         if (currentFilters.search) {
           query = query.or(`title.ilike.%${currentFilters.search}%,description.ilike.%${currentFilters.search}%`)
@@ -67,16 +66,31 @@ export function ReportsPage() {
       const { data, error: fetchError } = safeResult
       if (fetchError) throw fetchError
       
+      const userMap = new Map(users.map(u => [u.id, u.name]))
       const itemsArray = (data as any[]) || []
       const mapped = itemsArray.map(item => {
         const rawSubs = (item as any).sub_items
         // Parse sub_items — it's JSONB, could be array, string, or null
         let subItems: any[] = []
         if (Array.isArray(rawSubs)) {
-          subItems = rawSubs
+          subItems = rawSubs.map((s: any) => ({
+            ...s,
+            assigned_user_name: s.assigned_user_id ? userMap.get(s.assigned_user_id) : ''
+          }))
         } else if (typeof rawSubs === 'string') {
-          try { subItems = JSON.parse(rawSubs) } catch { subItems = [] }
+          try { 
+            const parsed = JSON.parse(rawSubs)
+            subItems = (Array.isArray(parsed) ? parsed : []).map((s: any) => ({
+              ...s,
+              assigned_user_name: s.assigned_user_id ? userMap.get(s.assigned_user_id) : ''
+            }))
+          } catch { subItems = [] }
         }
+
+        const assignedUserNames = (item.assigned_user_ids || []).map((uid: string) => userMap.get(uid)).filter(Boolean)
+        const responsibleUserId = (item as any).template?.responsible_user_id
+        const responsibleUserName = responsibleUserId ? userMap.get(responsibleUserId) : ''
+
         return {
           ...item,
           // Use template's sort_order, fallback to item's, then 9999. Treat 0 as 9999.
@@ -84,7 +98,8 @@ export function ReportsPage() {
           category_name: (item as any).category?.name ?? '',
           category_color: (item as any).category?.color ?? '',
           category_icon: (item as any).category?.icon ?? '',
-          assigned_user_name: (item as any).assigned_user?.name ?? '',
+          assigned_user_name: assignedUserNames.join(', ') || 'Chưa giao',
+          responsible_user_name: responsibleUserName || 'Chưa chọn',
           sub_items: subItems,  // Always a plain JS array
         }
       })

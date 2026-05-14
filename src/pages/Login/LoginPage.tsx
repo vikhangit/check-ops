@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import styles from './LoginPage.module.css'
 
 export function LoginPage() {
-  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useUserStore()
@@ -13,7 +13,8 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !password.trim()) {
+    
+    if (!email.trim() || !password.trim()) {
       toast.error('Vui lòng nhập đầy đủ thông tin')
       return
     }
@@ -21,69 +22,65 @@ export function LoginPage() {
     setLoading(true)
     try {
       // Sign In
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: name.trim(),
-          password: password,
-        })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      })
 
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            throw new Error('Sai email hoặc mật khẩu. Vui lòng thử lại.')
-          }
-          if (error.message.includes('Email not confirmed')) {
-            throw new Error('Tài khoản chưa được xác nhận email. Vui lòng kiểm tra hộp thư.')
-          }
-          if (error.message.includes('Database error querying schema') || error.message.includes('Relation "profiles" does not exist')) {
-            throw new Error('Lỗi đồng bộ cơ sở dữ liệu. Vui lòng chạy script thiết lập trong Supabase (file supabase_setup.sql).')
-          }
-          throw error
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Sai email hoặc mật khẩu. Vui lòng thử lại.')
         }
+        throw error
+      }
 
-        if (data.user) {
-          // Profile is created/managed by trigger, but we fetch it to update store
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.user.id)
-              .single()
-
-            if (profileError) {
-              // If profile doesn't exist yet (trigger delay), use session data and notify
-              console.warn('Profile not found yet:', profileError)
-              const fallbackUser = {
-                id: data.user.id,
-                name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-                role: (name.trim().toLowerCase() === 'tranphuong0512@gmail.com' ? 'admin' : 'staff') as 'admin' | 'staff',
-                avatar: '',
-                is_active: 1,
-                created_at: data.user.created_at,
-                email: data.user.email,
-                permissions: undefined // fallback user has no permissions until profile syncs
-              }
-              login(fallbackUser as any)
-              toast.success(`Chào mừng! (Hệ thống đang đồng bộ hồ sơ)`)
-            } else {
-              login({
-                id: data.user.id,
-                name: profile.name,
-                role: profile.role,
-                avatar: profile.avatar || '',
-                is_active: profile.is_active ? 1 : 0,
-                created_at: profile.created_at,
-                permissions: profile.permissions || undefined
-              })
-              toast.success(`Chào mừng ${profile.name}!`)
-            }
-          } catch (pErr) {
-            console.error('Profile fetch crash:', pErr)
-            throw new Error('Không thể tải hồ sơ người dùng. Vui lòng kiểm tra kết nối CSDL.')
-          }
-        }
+      if (data.user) {
+        await handleLoginSuccess(data.user)
+      }
     } catch (err: any) {
       toast.error(err.message || 'Thao tác thất bại')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleLoginSuccess = async (user: any) => {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        console.warn('Profile not found yet:', profileError)
+        const fallbackUser = {
+          id: user.id,
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          role: (email.trim().toLowerCase() === 'tranphuong0512@gmail.com' ? 'admin' : 'staff') as 'admin' | 'staff',
+          avatar: '',
+          is_active: 1,
+          created_at: user.created_at,
+          email: user.email,
+          permissions: undefined
+        }
+        login(fallbackUser as any)
+        toast.success(`Chào mừng! (Hệ thống đang đồng bộ hồ sơ)`)
+      } else {
+        login({
+          id: user.id,
+          name: profile.name,
+          role: profile.role,
+          avatar: profile.avatar || '',
+          is_active: profile.is_active ? 1 : 0,
+          created_at: profile.created_at,
+          permissions: profile.permissions || undefined
+        })
+        toast.success(`Chào mừng ${profile.name}!`)
+      }
+    } catch (pErr) {
+      console.error('Profile fetch crash:', pErr)
+      throw new Error('Không thể tải hồ sơ người dùng.')
     }
   }
 
@@ -110,21 +107,19 @@ export function LoginPage() {
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Đăng Nhập</h2>
-            <p className={styles.cardSub}>
-              Nhập thông tin tài khoản để tiếp tục
-            </p>
+            <p className={styles.cardSub}>Nhập thông tin tài khoản để tiếp tục</p>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className="form-group">
               <label className="form-label">Email</label>
               <input
-                id="login-name"
+                id="login-email"
                 type="email"
                 className="form-input"
                 placeholder="example@gmail.com"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 autoFocus
                 disabled={loading}
               />

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { useUserStore } from '../../store/useUserStore'
 import { useAppStore } from '../../store/useAppStore'
-import { supabase } from '../../lib/supabase'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../../lib/supabase'
 import type { User, Category } from '../../types/electron'
 import { UpdateTab } from './UpdateTab'
 import styles from './SettingsPage.module.css'
@@ -51,6 +52,8 @@ function UsersTab({ currentUser }: { currentUser: User | null }) {
   const [isForm, setIsForm] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
   const [form, setForm] = useState<any>({ name: '', email: '', password: '', role: 'staff', permissions: null })
+  const [loading, setLoading] = useState(false)
+  const [showInstructions, setShowInstructions] = useState(false)
   const [pwdForm, setPwdForm] = useState({ userId: '', oldPwd: '', newPwd: '' })
   const [isPwdForm, setIsPwdForm] = useState(false)
 
@@ -72,6 +75,8 @@ function UsersTab({ currentUser }: { currentUser: User | null }) {
   const openCreate = () => {
     setEditUser(null)
     setForm({ name: '', email: '', password: '', role: 'staff' })
+    setLoading(false)
+    setShowInstructions(false)
     setIsForm(true)
   }
 
@@ -91,6 +96,7 @@ function UsersTab({ currentUser }: { currentUser: User | null }) {
     e.preventDefault()
     if (!form.name.trim()) { toast.error('Tên không được để trống'); return }
     
+    setLoading(true)
     try {
       if (editUser) {
         const { error } = await supabase
@@ -101,9 +107,31 @@ function UsersTab({ currentUser }: { currentUser: User | null }) {
         toast.success('Đã cập nhật hồ sơ')
         setIsForm(false)
         load()
+      } else {
+        // Direct creation using temp client trick
+        if (!form.email.trim() || !form.password.trim()) {
+           toast.error('Vui lòng nhập Email và Mật khẩu')
+           setLoading(false)
+           return
+        }
+
+        const tempClient = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } })
+        const { data, error: signUpError } = await tempClient.auth.signUp({
+          email: form.email.trim(),
+          password: form.password,
+          options: { data: { name: form.name.trim() } }
+        })
+
+        if (signUpError) throw signUpError
+        
+        toast.success(`Đã tạo tài khoản cho ${form.name} thành công!`)
+        setIsForm(false)
+        load()
       }
     } catch (err: any) {
       toast.error(err.message || 'Lỗi khi lưu')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -172,27 +200,50 @@ function UsersTab({ currentUser }: { currentUser: User | null }) {
         <div className="modal-overlay" onClick={() => setIsForm(false)}>
           <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">{editUser ? 'Sửa Người Dùng' : '📢 Thêm Nhân Sự Mới'}</h3>
+              <h3 className="modal-title">{editUser ? 'Sửa Người Dùng' : '➕ Thêm Nhân Sự Mới'}</h3>
               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setIsForm(false)}>✕</button>
             </div>
-            {editUser ? (
-              <form onSubmit={handleSubmit}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Tên *</label>
-                    <input type="text" className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required autoFocus />
+            
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {!editUser && (
+                  <div style={{ background: 'rgba(99,102,241,0.1)', padding: 12, borderRadius: 8, marginBottom: 8 }}>
+                    <p style={{ fontSize: 13, color: 'var(--c-primary-light)', lineHeight: 1.5 }}>
+                      🛡️ <strong>Chế độ Nội bộ:</strong> Hệ thống đã tắt đăng ký tự do. 
+                      Bạn (Admin) sẽ trực tiếp tạo tài khoản cho nhân viên tại đây.
+                    </p>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Vai Trò</label>
-                    <select className="form-select" value={form.role} onChange={(e) => setForm((f: any) => ({ ...f, role: e.target.value }))}>
-                      <option value="staff">👤 Staff</option>
-                      <option value="admin">👑 Admin</option>
-                    </select>
-                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Tên Hiển Thị *</label>
+                  <input type="text" className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required autoFocus disabled={loading} />
                 </div>
 
-                {form.role === 'staff' && (form as any).permissions && (
-                  <div style={{ marginTop: 16 }}>
+                {!editUser && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Email Đăng Nhập *</label>
+                      <input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required placeholder="nhanvien@gmail.com" disabled={loading} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Mật Khẩu Khởi Tạo *</label>
+                      <input type="password" className="form-input" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} required placeholder="Ít nhất 6 ký tự" disabled={loading} />
+                    </div>
+                  </>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Vai Trò</label>
+                  <select className="form-select" value={form.role} onChange={(e) => setForm((f: any) => ({ ...f, role: e.target.value }))} disabled={loading}>
+                    <option value="staff">👤 Staff (Nhân viên)</option>
+                    <option value="admin">👑 Admin (Quản trị)</option>
+                  </select>
+                </div>
+              </div>
+
+              {editUser && form.role === 'staff' && (form as any).permissions && (
+                <div style={{ marginTop: 16 }}>
                     <label className="form-label">Ma Trận Quyền Hạn</label>
                     <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8 }}>
                       <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
@@ -231,34 +282,23 @@ function UsersTab({ currentUser }: { currentUser: User | null }) {
                   </div>
                 )}
 
-                <div className="modal-footer" style={{ marginTop: 16 }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setIsForm(false)}>Huỷ</button>
-                  <button type="submit" className="btn btn-primary">💾 Cập Nhật</button>
+                <div className="modal-footer" style={{ marginTop: 20 }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsForm(false)} disabled={loading}>Huỷ</button>
+                  <button type="submit" className="btn btn-primary" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <div className="spinner" style={{ width: 14, height: 14 }} />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>{editUser ? '💾 Cập Nhật' : '➕ Tạo Tài Khoản'}</>
+                    )}
+                  </button>
                 </div>
               </form>
-            ) : (
-              <div style={{ padding: '0 0' }}>
-                <div style={{ background: 'var(--bg-secondary)', padding: "16px", borderRadius: "8px", fontSize: "14px", lineHeight: "1.6", color: "var(--text-secondary)" }}>
-                  <p style={{ marginBottom: '12px', color: 'var(--text-primary)', fontWeight: 'bold' }}>
-                    Hệ thống hiện tại sử dụng Bảo mật Điện toán Đám mây (Supabase), vì vậy bạn không thể tạo tài khoản hộ nhân viên.
-                  </p>
-                  <p style={{ marginBottom: '8px' }}><strong>Cách thêm nhân sự:</strong></p>
-                  <ol style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <li>Yêu cầu nhân viên mở phần mềm CheckOps.</li>
-                    <li>Ở màn hình đăng nhập, chọn tab <strong>Đăng Ký</strong>.</li>
-                    <li>Nhân viên tự nhập Email, Tên hiển thị và Mật khẩu tự chọn.</li>
-                    <li>Sau khi đăng ký thành công, hệ thống sẽ tự động gán quyền <strong>Staff</strong> (Nhân viên).</li>
-                    <li>Tài khoản đó sẽ xuất hiện trong danh sách này và bạn có thể phân quyền hoặc đổi tên sau.</li>
-                  </ol>
-                </div>
-                <div className="modal-footer" style={{ marginTop: '20px' }}>
-                  <button type="button" className="btn btn-primary" onClick={() => setIsForm(false)}>Đã hiểu</button>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {isPwdForm && (
         <div className="modal-overlay" onClick={() => setIsPwdForm(false)}>

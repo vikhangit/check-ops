@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase, getCurrentSession } from '../lib/supabase'
 import { refreshAuthSession } from '../lib/supabaseUtils'
 
@@ -10,7 +10,8 @@ export interface TemplateDraft {
   title: string
   description: string
   category_id: string
-  assigned_user_id: string
+  assigned_user_ids: string[]
+  responsible_user_id: string
   priority: 'low' | 'normal' | 'high'
   is_active: number
   subItems: Array<{ id: string; title: string }>
@@ -92,7 +93,15 @@ export function useTemplateDraft() {
     }
   }, [])
 
-  return { saveDraft, loadDraft, clearDraft, startPeriodicSave, stopPeriodicSave }
+  const result = useMemo(() => ({ 
+    saveDraft, 
+    loadDraft, 
+    clearDraft, 
+    startPeriodicSave, 
+    stopPeriodicSave 
+  }), [saveDraft, loadDraft, clearDraft, startPeriodicSave, stopPeriodicSave])
+
+  return result
 }
 
 /**

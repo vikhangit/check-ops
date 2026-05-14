@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // REPLACE THESE WITH YOUR SUPABASE PROJECT DETAILS
-const supabaseUrl = 'https://rsuiybfqgzcibqqjnnmn.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdWl5YmZxZ3pjaWJxcWpubm1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NDY4ODQsImV4cCI6MjA5MTEyMjg4NH0.AfIdh2Pw0Tjs3QNJWsPW904Mp0BU85C7JWhnjPSqU1Y'
+export const supabaseUrl = 'https://rsuiybfqgzcibqqjnnmn.supabase.co'
+export const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdWl5YmZxZ3pjaWJxcWpubm1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NDY4ODQsImV4cCI6MjA5MTEyMjg4NH0.AfIdh2Pw0Tjs3QNJWsPW904Mp0BU85C7JWhnjPSqU1Y'
 
 // Custom No-op Lock Manager for Electron
 // Bypasses the brittle Navigator LockManager which hangs in multi-process Electron

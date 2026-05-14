@@ -90,20 +90,31 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   loadTemplates: async () => {
-    // If already have templates cached, refresh silently without blocking
     const hasCached = get().templates.length > 0
-    if (!hasCached) {
-      // Do nothing special, just fetch
-    }
     try {
-      // Use retry logic to handle auth lock timeouts
       const [{ data: tpls }, { data: cats }, { data: profiles }] = await Promise.all([
         queryWithRetry(() => supabase.from('checklist_templates').select('*').order('sort_order', { ascending: true })),
         queryWithRetry(() => supabase.from('categories').select('*').order('sort_order', { ascending: true })),
         queryWithRetry(() => supabase.from('profiles').select('*').order('name')),
       ])
+
+      const userMap = new Map((profiles || []).map((p: any) => [p.id, p.name]))
+      const categoriesMap = new Map((cats || []).map((c: any) => [c.id, c]))
+
+      const mappedTemplates = (tpls || []).map((tpl: any) => {
+        const cat = categoriesMap.get(tpl.category_id)
+        return {
+          ...tpl,
+          category_name: cat?.name,
+          category_color: cat?.color,
+          category_icon: cat?.icon,
+          responsible_user_name: userMap.get(tpl.responsible_user_id),
+          assigned_user_names: (tpl.assigned_user_ids || []).map((uid: string) => userMap.get(uid)).filter(Boolean)
+        }
+      })
+
       set({
-        templates: (tpls || []) as any,
+        templates: mappedTemplates as any,
         categories: (cats || []) as any,
         users: (profiles || []).map((p: any) => ({
           id: p.id,
@@ -117,7 +128,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       })
     } catch (err) {
       console.error('loadTemplates error after retries:', err)
-      // Try one more recovery attempt
       try {
         await refreshAuthSession()
       } catch (recoveryErr) {
@@ -133,15 +143,14 @@ export const useDataStore = create<DataState>((set, get) => ({
         .from('checklist_items')
         .select(`
           *,
-          category:categories(*),
-          assigned_user:profiles!checklist_items_assigned_user_id_fkey(*)
+          category:categories(*)
         `)
         .gte('date', filters.dateFrom)
         .lte('date', filters.dateTo)
 
       if (filters.status) query = query.eq('status', filters.status)
       if (filters.category_id) query = query.eq('category_id', filters.category_id)
-      if (filters.assigned_user_id) query = query.eq('assigned_user_id', filters.assigned_user_id)
+      if (filters.assigned_user_id) query = query.contains('assigned_user_ids', [filters.assigned_user_id])
       if (filters.search) {
         query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
       }
@@ -152,13 +161,15 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       if (error) throw error
 
+      const { users } = get()
+      const userMap = new Map(users.map(u => [u.id, u.name]))
+
       const mapped = (data || []).map(item => ({
         ...item,
         category_name: (item as any).category?.name,
         category_color: (item as any).category?.color,
         category_icon: (item as any).category?.icon,
-        assigned_user_name: (item as any).assigned_user?.name,
-        // Ensure sub_items is always an array
+        assigned_user_names: (item as any).assigned_user_ids?.map((uid: string) => userMap.get(uid)).filter(Boolean) || [],
         sub_items: Array.isArray((item as any).sub_items) ? (item as any).sub_items : [],
       }))
 

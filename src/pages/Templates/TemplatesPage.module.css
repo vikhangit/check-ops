@@ -50,6 +50,15 @@
   opacity: 0.5;
 }
 
+.notEditable {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.disabled {
+  cursor: not-allowed;
+}
+
 .cardTop {
   display: flex;
   align-items: flex-start;

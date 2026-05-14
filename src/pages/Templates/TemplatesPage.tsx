@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useUserStore } from '../../store/useUserStore'
 import { useAppStore } from '../../store/useAppStore'
 import { useDataStore } from '../../store/useDataStore'
@@ -23,8 +23,17 @@ export function TemplatesPage() {
   const [importing, setImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Use global store templates, but keep local copy for optimistic updates
-  const displayTemplates: ChecklistTemplate[] = localTemplates.length > 0 ? localTemplates : templates as any
+  // Filter templates based on permissions: Admin sees all, Staff sees only their assigned/responsible templates
+  const displayTemplates: ChecklistTemplate[] = useMemo(() => {
+    const raw = localTemplates.length > 0 ? localTemplates : templates as any
+    if (!currentUser) return []
+    if (currentUser.role === 'admin') return raw
+    
+    return raw.filter((tpl: ChecklistTemplate) => 
+      tpl.responsible_user_id === currentUser.id || 
+      (tpl.assigned_user_ids || []).includes(currentUser.id)
+    )
+  }, [localTemplates, templates, currentUser])
 
   useEffect(() => {
     // If already have cached data, don't show spinner — refresh in background
@@ -64,7 +73,18 @@ export function TemplatesPage() {
     setIsFormOpen(true)
   }
 
+  const canEditTemplate = (tpl: ChecklistTemplate) => {
+    if (!currentUser) return false
+    if (currentUser.role === 'admin') return true
+    if (tpl.responsible_user_id === currentUser.id) return true
+    return false
+  }
+
   const openEdit = (tpl: ChecklistTemplate) => {
+    if (!canEditTemplate(tpl)) {
+      toast.error('Bạn không phụ trách quản lý template này!')
+      return
+    }
     setEditTemplate(tpl)
     setIsFormOpen(true)
   }
@@ -78,6 +98,10 @@ export function TemplatesPage() {
   }
 
   const handleDelete = async (tpl: ChecklistTemplate) => {
+    if (!canEditTemplate(tpl)) {
+      toast.error('Bạn không có quyền xóa template này!')
+      return
+    }
     if (!confirm(`Xoá template "${tpl.title}"? Các checklist đã tạo từ template này sẽ không bị ảnh hưởng.`)) return
     try {
       const { error } = await queryWithRetry(() => 
@@ -94,6 +118,10 @@ export function TemplatesPage() {
   }
 
   const handleToggleActive = async (tpl: ChecklistTemplate) => {
+    if (!canEditTemplate(tpl)) {
+      toast.error('Bạn không phụ trách quản lý template này!')
+      return
+    }
     try {
       const { error } = await queryWithRetry(() =>
         supabase
@@ -164,7 +192,7 @@ export function TemplatesPage() {
             title: template.title,
             description: template.description || '',
             category_id,
-            assigned_user_id,
+            assigned_user_ids: assigned_user_id ? [assigned_user_id] : [],
             priority: template.priority,
             is_active: template.is_active,
             sort_order: template.sort_order,
@@ -301,52 +329,60 @@ export function TemplatesPage() {
         </div>
       ) : (
         <div className={styles.grid}>
-          {displayTemplates.map((tpl, idx) => (
-            <div key={tpl.id} className={`card ${styles.card} ${!tpl.is_active ? styles.cardInactive : ''}`}>
-              <div className={styles.cardTop}>
-                <span className={styles.cardNum}>{tpl.sort_order}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className={styles.cardTitle}>{tpl.title}</div>
-                  {tpl.description && (
-                    <div className={styles.cardDesc}>{tpl.description}</div>
-                  )}
+          {displayTemplates.map((tpl, idx) => {
+            const isEditable = canEditTemplate(tpl)
+            return (
+              <div key={tpl.id} className={`card ${styles.card} ${!tpl.is_active ? styles.cardInactive : ''} ${!isEditable ? styles.notEditable : ''}`}>
+                <div className={styles.cardTop}>
+                  <span className={styles.cardNum}>{tpl.sort_order}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className={styles.cardTitle}>{tpl.title}</div>
+                    {tpl.description && (
+                      <div className={styles.cardDesc}>{tpl.description}</div>
+                    )}
+                  </div>
+                  <div className={styles.cardActions} style={{ pointerEvents: 'auto' }}>
+                    {(currentUser?.role === 'admin' || currentUser?.permissions?.templates?.edit) && (
+                      <>
+                        <button
+                          className={`btn btn-sm ${tpl.is_active ? 'btn-success' : 'btn-secondary'} ${!isEditable ? styles.disabled : ''}`}
+                          onClick={() => handleToggleActive(tpl)}
+                          title={tpl.is_active ? 'Đang bật – click để tắt' : 'Đang tắt – click để bật'}
+                        >
+                          {tpl.is_active ? '✅ Bật' : '⭕ Tắt'}
+                        </button>
+                        <button className={`btn btn-ghost btn-sm btn-icon ${!isEditable ? styles.disabled : ''}`} onClick={() => openEdit(tpl)}>✏️</button>
+                      </>
+                    )}
+                    {(currentUser?.role === 'admin' || currentUser?.permissions?.templates?.delete) && (
+                      <button className={`btn btn-ghost btn-sm btn-icon ${!isEditable ? styles.disabled : ''}`} onClick={() => handleDelete(tpl)}>🗑️</button>
+                    )}
+                  </div>
                 </div>
-                <div className={styles.cardActions}>
-                  {(currentUser?.role === 'admin' || currentUser?.permissions?.templates?.edit) && (
-                    <>
-                      <button
-                        className={`btn btn-sm ${tpl.is_active ? 'btn-success' : 'btn-secondary'}`}
-                        onClick={() => handleToggleActive(tpl)}
-                        title={tpl.is_active ? 'Đang bật – click để tắt' : 'Đang tắt – click để bật'}
-                      >
-                        {tpl.is_active ? '✅ Bật' : '⭕ Tắt'}
-                      </button>
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(tpl)}>✏️</button>
-                    </>
+                <div className={styles.cardMeta}>
+                  {tpl.category_name && (
+                    <span
+                      className={styles.catChip}
+                      style={{ background: `${tpl.category_color}20`, color: tpl.category_color || '#6366f1', borderColor: `${tpl.category_color}30` }}
+                    >
+                      {tpl.category_icon} {tpl.category_name}
+                    </span>
                   )}
-                  {(currentUser?.role === 'admin' || currentUser?.permissions?.templates?.delete) && (
-                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleDelete(tpl)}>🗑️</button>
+                  {tpl.responsible_user_name && (
+                    <span className={styles.userChip} title="Người quản lý template">👑 {tpl.responsible_user_name}</span>
                   )}
-                </div>
-              </div>
-              <div className={styles.cardMeta}>
-                {tpl.category_name && (
-                  <span
-                    className={styles.catChip}
-                    style={{ background: `${tpl.category_color}20`, color: tpl.category_color || '#6366f1', borderColor: `${tpl.category_color}30` }}
-                  >
-                    {tpl.category_icon} {tpl.category_name}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {tpl.assigned_user_names && tpl.assigned_user_names.map((uName, uIdx) => (
+                      <span key={uIdx} className={styles.userChip} style={{ fontSize: 10 }}>👤 {uName}</span>
+                    ))}
+                  </div>
+                  <span className={`${styles.priorityChip} ${styles[`pri_${tpl.priority}`]}`}>
+                    {tpl.priority === 'high' ? '🔴 Cao' : tpl.priority === 'low' ? '🔵 Thấp' : '🟡 Bình Thường'}
                   </span>
-                )}
-                {tpl.assigned_user_name && (
-                  <span className={styles.userChip}>👤 {tpl.assigned_user_name}</span>
-                )}
-                <span className={`${styles.priorityChip} ${styles[`pri_${tpl.priority}`]}`}>
-                  {tpl.priority === 'high' ? '🔴 Cao' : tpl.priority === 'low' ? '🔵 Thấp' : '🟡 Bình Thường'}
-                </span>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

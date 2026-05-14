@@ -23,7 +23,14 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const { toast } = useAppStore()
   const { setCurrentDate, setFilters } = useChecklistStore()
-  const { dashboardStats: stats, dashboardPeriod: period, setDashboardStats: setStats, setDashboardPeriod: setPeriod } = useDataStore()
+  const { 
+    dashboardStats: stats, 
+    dashboardPeriod: period, 
+    setDashboardStats: setStats, 
+    setDashboardPeriod: setPeriod,
+    users,
+    loadMeta
+  } = useDataStore()
   const [loading, setLoading] = useState(false)   // Start false — show cached or empty immediately
   const [error, setError] = useState<string | null>(null)
   const isLoadingRef = useRef(false)  // Prevent duplicate parallel calls
@@ -59,8 +66,7 @@ export function DashboardPage() {
           .from('checklist_items')
           .select(`
             *,
-            category:categories(*),
-            assigned_user:profiles!checklist_items_assigned_user_id_fkey(*)
+            category:categories(*)
           `)
           .gte('date', dateFrom)
           .lte('date', dateTo)
@@ -73,6 +79,12 @@ export function DashboardPage() {
 
       clearTimeout(timeout)
       if (fetchError) throw fetchError
+
+      // Ensure users are loaded for mapping
+      if (users.length === 0) {
+        await loadMeta()
+      }
+      const userMap = new Map(users.map(u => [u.id, u.name]))
 
       const summary = { total: 0, done: 0, error: 0, in_progress: 0, pending: 0 }
       const byDateMap: Record<string, any> = {}
@@ -103,12 +115,25 @@ export function DashboardPage() {
         byDateMap[item.date].total++
         byDateMap[item.date][item.status]++
 
-        const userName = item.assigned_user?.name || 'Chưa giao'
-        if (!byUserMap[userName]) {
-          byUserMap[userName] = { name: userName, total: 0, done: 0, error: 0, in_progress: 0, pending: 0 }
+        // Aggregate by multiple users
+        const assignedIds = (item.assigned_user_ids || []) as string[]
+        if (assignedIds.length === 0) {
+          const userName = 'Chưa giao'
+          if (!byUserMap[userName]) {
+            byUserMap[userName] = { name: userName, total: 0, done: 0, error: 0, in_progress: 0, pending: 0 }
+          }
+          byUserMap[userName].total++
+          byUserMap[userName][item.status]++
+        } else {
+          assignedIds.forEach(uid => {
+            const userName = userMap.get(uid) || 'User ẩn'
+            if (!byUserMap[userName]) {
+              byUserMap[userName] = { name: userName, total: 0, done: 0, error: 0, in_progress: 0, pending: 0 }
+            }
+            byUserMap[userName].total++
+            byUserMap[userName][item.status]++
+          })
         }
-        byUserMap[userName].total++
-        byUserMap[userName][item.status]++
 
         const catName = item.category?.name || 'Khác'
         if (!byCategoryMap[catName]) {

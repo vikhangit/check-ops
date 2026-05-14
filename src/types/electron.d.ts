@@ -3,6 +3,7 @@ export interface SubItem {
   id: string
   title: string
   status: 'pending' | 'in_progress' | 'done' | 'error'
+  assigned_user_id?: string
   notes?: string
   result?: string
   start_time?: string
@@ -27,8 +28,9 @@ export interface ChecklistItem {
   category_name?: string
   category_color?: string
   category_icon?: string
-  assigned_user_id?: string
-  assigned_user_name?: string
+  assigned_user_ids?: string[]
+  assigned_user_names?: string[]
+  responsible_user_id?: string
   status: 'pending' | 'in_progress' | 'done' | 'error'
   check_time?: string
   notes?: string
@@ -88,8 +90,10 @@ export interface ChecklistTemplate {
   category_name?: string
   category_color?: string
   category_icon?: string
-  assigned_user_id?: string
-  assigned_user_name?: string
+  assigned_user_ids?: string[]
+  assigned_user_names?: string[]
+  responsible_user_id?: string
+  responsible_user_name?: string
   priority: 'low' | 'normal' | 'high'
   is_active: number
   sort_order: number
@@ -123,6 +127,8 @@ export interface ChecklistFilters {
   status?: string
   category_id?: string
   assigned_user_id?: string
+  assigned_user_ids?: string[]
+  responsible_user_id?: string
   search?: string
   dateFrom?: string
   dateTo?: string

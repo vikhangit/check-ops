@@ -90,7 +90,8 @@ export function registerExportHandlers() {
         { key: 'title', width: 35 },
         { key: 'description', width: 45 },
         { key: 'category_name', width: 18 },
-        { key: 'assigned_user_name', width: 18 },
+        { key: 'assigned_user_name', width: 22 },
+        { key: 'responsible_user_name', width: 18 },
         { key: 'status', width: 15 },
         { key: 'priority', width: 15 },
         { key: 'check_time', width: 20 },
@@ -103,7 +104,7 @@ export function registerExportHandlers() {
 
       // Title row 1
       const mainTitle1 = mainSheet.addRow([`Bao Cao Van Hanh CheckOps (${dateRange})`])
-      mainSheet.mergeCells(1, 1, 1, 14)
+      mainSheet.mergeCells(1, 1, 1, 15)
       mainTitle1.height = 45
       titleStyle(mainTitle1.getCell(1), 'FF1E1B4B', 20)
       mainTitle1.getCell(1).border = borderGreen
@@ -112,13 +113,13 @@ export function registerExportHandlers() {
       const now = new Date()
       const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`
       const mainTitle2 = mainSheet.addRow([`Xuất lúc: ${timeStr} | Tong: ${items.length} cong viec`])
-      mainSheet.mergeCells(2, 1, 2, 14)
+      mainSheet.mergeCells(2, 1, 2, 15)
       mainTitle2.height = 20
       mainTitle2.getCell(1).font = { name: 'Be Vietnam Pro', italic: true, size: 10, color: { argb: 'FF64748B' } }
       mainTitle2.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
 
       // Header row 3
-      const mainHeader = mainSheet.addRow(['STT', 'Ngay', 'Cong Viec', 'Mo Ta', 'Danh Muc', 'Nguoi Phu Trach', 'Trang Thai', 'Uu Tien', 'Check Luc', 'Ghi Chu', 'Muc Con (Tong)', 'Muc Con Loi', 'Muc Con Done', 'Muc Con Ton Dong'])
+      const mainHeader = mainSheet.addRow(['STT', 'Ngay', 'Cong Viec', 'Mo Ta', 'Danh Muc', 'Nguoi Thuc Hien', 'Nguoi Quan Ly', 'Trang Thai', 'Uu Tien', 'Check Luc', 'Ghi Chu', 'Muc Con (Tong)', 'Muc Con Loi', 'Muc Con Done', 'Muc Con Ton Dong'])
       mainHeader.eachCell((cell) => headerStyle(cell))
       mainHeader.height = rowHeight
 
@@ -199,6 +200,7 @@ export function registerExportHandlers() {
           it.description || '',
           it.category_name || '',
           it.assigned_user_name || '',
+          it.responsible_user_name || '',
           (statusLabels[it.status] || it.status).replace(/&nbsp;/g, ' '),
           priorityLabels[it.priority] || '',
           it.check_time ? formatDateTime(it.check_time) : '',
@@ -214,7 +216,7 @@ export function registerExportHandlers() {
           cell.font = { name: 'Be Vietnam Pro', size: 11 }
           
           // Status styling
-          if (colNumber === 7) {
+          if (colNumber === 8) {
             cell.alignment = { horizontal: 'center', vertical: 'middle' }
             if (it.status === 'pending') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA1A1AA' } }
@@ -222,7 +224,7 @@ export function registerExportHandlers() {
             }
           }
           // Priority styling
-          if (colNumber === 8) {
+          if (colNumber === 9) {
             cell.alignment = { horizontal: 'center', vertical: 'middle' }
             if (it.priority === 'high') {
               cell.font = { name: 'Be Vietnam Pro', color: { argb: 'FFEF4444' }, bold: true, size: 11 }
@@ -383,12 +385,14 @@ export function registerExportHandlers() {
               <tr style="background-color: #fdfdfd; font-size: 10px;">
                 <td style="text-align: center; width: 30px; border-left: 3px solid #cbd5e1;">${i + 1}.${subIdx + 1}</td>
                 <td colspan="2" style="padding-left: 20px;">└─ ${esc(sub.title)}</td>
-                <td colspan="3" style="color: #64748b;">
+                <td colspan="2" style="color: #64748b;">
                   ${sub.result ? `<span style="color: #059669; font-weight: 600;">kết quả:</span> ${esc(sub.result)}` : ''}
                   ${hasError ? `${sub.result ? '<br/>' : ''}<span style="color: #ef4444; font-weight: 600;">⚠ Lỗi:</span> ${esc(ed.description)}` : ''}
                 </td>
-                <td style="text-align: center;">
-                  <span class="badge" style="background-color: ${statusColors[sub.status] || '#94a3b8'}; font-size: 8px; width: 70px; padding: 2px 0;">
+                <td style="width: 100px;">${esc(sub.assigned_user_name)}</td>
+                <td style="width: 100px;"></td>
+                <td class="status-cell" style="text-align: center;">
+                  <span class="badge" style="background-color: ${statusColors[sub.status] || '#94a3b8'}; font-size: 8px; width: 70px; padding: 2px 0; border-radius: 4px; color: #fff; display: inline-block;">
                     ${(statusLabels[sub.status] || sub.status).replace(/&nbsp;/g, ' ')}
                   </span>
                 </td>
@@ -416,6 +420,7 @@ export function registerExportHandlers() {
           <td style="width: 160px;" class="col-desc">${it.description ? `<div style="font-size: 11px; color: #64748b;">${esc(it.description)}</div>` : ''}</td>
           <td style="width: 80px;">${esc(it.category_name)}</td>
           <td style="width: 100px;">${esc(it.assigned_user_name)}</td>
+          <td style="width: 100px;">${esc(it.responsible_user_name)}</td>
           <td class="status-cell" style="width: 100px; min-width: 100px; text-align: center; vertical-align: middle; padding: 4px;">
              <span class="badge status-badge" style="background-color: ${statusColors[it.status] || '#94a3b8'}; font-size: 9px; width: 90px; padding: 4px 0; display: inline-block; box-sizing: border-box; border-radius: 4px; color: #fff; font-weight: 700;">
                ${(statusLabels[it.status] || it.status).replace(/&nbsp;/g, ' ')}
@@ -537,7 +542,8 @@ export function registerExportHandlers() {
               <th style="width: 170px;">Công việc</th>
               <th style="width: 160px;">Mô tả</th>
               <th style="width: 80px;">Danh mục</th>
-              <th style="width: 100px;">Người phụ trách</th>
+              <th style="width: 100px;">Người thực hiện</th>
+              <th style="width: 100px;">Người quản lý</th>
               <th style="width: 100px; min-width: 100px; text-align: center;">Trạng thái</th>
               <th style="width: 70px; text-align: center;">Ưu tiên</th>
               <th style="width: 100px; text-align: center;">Check lúc</th>

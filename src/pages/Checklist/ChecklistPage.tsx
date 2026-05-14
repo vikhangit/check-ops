@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, Fragment } from 'react'
 import { useChecklistStore } from '../../store/useChecklistStore'
 import { useAppStore } from '../../store/useAppStore'
 import { useUserStore } from '../../store/useUserStore'
+import { useDataStore } from '../../store/useDataStore'
 import { supabase } from '../../lib/supabase'
 import type { ChecklistItem, Category, User, SubItem } from '../../types/electron'
 import { ChecklistForm } from './ChecklistForm'
@@ -42,6 +43,7 @@ export function ChecklistPage() {
 
   const { toast } = useAppStore()
   const { currentUser } = useUserStore()
+  const { templates, loadTemplates } = useDataStore()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -65,6 +67,7 @@ export function ChecklistPage() {
     fetchByDate(currentDate)
     subscribeToChanges(currentDate)
     loadMeta()
+    loadTemplates()
     
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
@@ -112,14 +115,14 @@ export function ChecklistPage() {
     return items.filter((item) => {
       if (filters.status && item.status !== filters.status) return false
       if (filters.category_id && item.category_id !== filters.category_id) return false
-      if (filters.assigned_user_id && item.assigned_user_id !== filters.assigned_user_id) return false
+      if (filters.assigned_user_id && !(item.assigned_user_ids || []).includes(filters.assigned_user_id)) return false
       if (filters.search) {
         const s = filters.search.toLowerCase()
         const matched =
           item.title.toLowerCase().includes(s) ||
           (item.description || '').toLowerCase().includes(s) ||
           (item.notes || '').toLowerCase().includes(s) ||
-          (item.assigned_user_name || '').toLowerCase().includes(s)
+          (item.assigned_user_names || []).some(name => name.toLowerCase().includes(s))
         if (!matched) return false
       }
       return true
@@ -147,7 +150,35 @@ export function ChecklistPage() {
     return 'pending'
   }
 
+  const canEditItem = (item: ChecklistItem) => {
+    if (!currentUser) return false
+    if (currentUser.role === 'admin') return true
+    
+    // STRICT: Only allow operation if user is explicitly in the assigned list OR is the responsible user (from template)
+    const isAssigned = item.assigned_user_ids && item.assigned_user_ids.includes(currentUser.id)
+    const isResponsible = item.responsible_user_id === currentUser.id
+    
+    return isAssigned || isResponsible
+  }
+
+  const canEditSubItem = (item: ChecklistItem, sub: SubItem) => {
+    if (!currentUser) return false
+    if (currentUser.role === 'admin') return true
+    
+    // STRICT: If sub-item has a specific assignee, only that person can operate
+    if (sub.assigned_user_id) {
+      return sub.assigned_user_id === currentUser.id
+    }
+
+    // If sub-item has no specific assignee, fallback to main item assignees
+    return canEditItem(item)
+  }
+
   const handleStatusChange = async (item: ChecklistItem, newStatus: string) => {
+    if (!canEditItem(item)) {
+      toast.error('Bạn không được phân công thực hiện công việc này!')
+      return
+    }
     setStatusDropdownId(null)
     
     // If item has sub-items, status is controlled automatically — block manual changes
@@ -162,10 +193,12 @@ export function ChecklistPage() {
   }
 
   const handleSubItemStatusChange = async (item: ChecklistItem, subId: string, newStatus: string) => {
+    const targetSub = item.sub_items?.find(s => s.id === subId)
+    if (!targetSub || !canEditSubItem(item, targetSub)) {
+      toast.error('Bạn không được phân công thực hiện mục con này!')
+      return
+    }
     setSubStatusDropdownId(null)
-    if (!item.sub_items) return
-    const targetSub = item.sub_items.find(s => s.id === subId)
-    if (!targetSub) return
 
     if (newStatus === 'error') {
       // Open error modal — will stamp reported_at when saving
@@ -302,6 +335,10 @@ export function ChecklistPage() {
   }
 
   const handleDelete = async (item: ChecklistItem) => {
+    if (!canEditItem(item)) {
+      toast.error('Bạn không có quyền xóa công việc này!')
+      return
+    }
     if (!confirm(`Xoá công việc "${item.title}"?`)) return
     const ok = await deleteItem(item.id)
     if (ok) toast.success('Đã xoá công việc')
@@ -327,6 +364,11 @@ export function ChecklistPage() {
 
   const handleSaveNotes = async () => {
     if (!notesModalItem) return
+
+    if (!canEditItem(notesModalItem)) {
+      toast.error('Bạn không có quyền cập nhật công việc này!')
+      return
+    }
 
     if (notesModalItem.status === 'error' && !notesText.trim()) {
       toast.error('Vui lòng nhập nguyên nhân lỗi hoặc ghi chú!')
@@ -528,11 +570,12 @@ export function ChecklistPage() {
               {filteredItems.map((item, idx) => {
                 const isExpanded = expandedItems.has(item.id)
                 const hasSubItems = item.sub_items && item.sub_items.length > 0
+                const isEditable = canEditItem(item)
                 
                 return (
                   <Fragment key={item.id}>
                     {/* Main Parent Row */}
-                    <tr className={`${styles.row} ${styles[`row_${item.status}`]} ${isExpanded ? styles.expandedParent : ''}`}>
+                    <tr className={`${styles.row} ${styles[`row_${item.status}`]} ${isExpanded ? styles.expandedParent : ''} ${!isEditable ? styles.notEditable : ''}`}>
                       <td className={styles.numCell}>{idx + 1}</td>
                       <td className={styles.titleCell}>
                         <div className={styles.titleMain}>{item.title}</div>
@@ -545,7 +588,7 @@ export function ChecklistPage() {
                         
                         {hasSubItems && (
                           <div 
-                            style={{ marginTop: 8, fontSize: 13, color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500 }}
+                            style={{ marginTop: 8, fontSize: 13, color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500, pointerEvents: 'auto' }}
                             onClick={() => toggleExpand(item.id)}
                           >
                             {isExpanded ? '📂 Thu gọn' : '📁 Mở rộng'} {item.sub_items!.length} mục con ({item.sub_items!.filter(s => s.status === 'done').length}/{item.sub_items!.length} hoàn thành)
@@ -565,23 +608,27 @@ export function ChecklistPage() {
                             <span className={styles.empty}>—</span>
                           )}
 
-                          {item.assigned_user_name ? (
-                            <span className={styles.userChip} style={{ fontSize: 11 }}>
-                              <span className={styles.userInitial} style={{ width: 18, height: 18, fontSize: 10 }}>
-                                {item.assigned_user_name.charAt(0).toUpperCase()}
-                              </span>
-                              {item.assigned_user_name}
-                            </span>
-                          ) : (
-                            <span className={styles.empty}>—</span>
-                          )}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {item.assigned_user_names && item.assigned_user_names.length > 0 ? (
+                              item.assigned_user_names.map((uName, uIdx) => (
+                                <span key={uIdx} className={styles.userChip} style={{ fontSize: 10, padding: '2px 6px' }}>
+                                  <span className={styles.userInitial} style={{ width: 16, height: 16, fontSize: 9 }}>
+                                    {uName.charAt(0).toUpperCase()}
+                                  </span>
+                                  {uName}
+                                </span>
+                              ))
+                            ) : (
+                              <span className={styles.empty}>—</span>
+                            )}
+                          </div>
 
                           <div className={styles.statusCell}>
                             <StatusBadge status={item.status} />
-                            {(currentUser?.role === 'admin' || currentUser?.permissions?.checklist?.edit) && (
+                            {isEditable && (currentUser?.role === 'admin' || currentUser?.permissions?.checklist?.edit) && (
                               <div 
                                 className={styles.statusDropdownWrapper}
-                                style={{ zIndex: statusDropdownId === item.id ? 100 : undefined }}
+                                style={{ zIndex: statusDropdownId === item.id ? 100 : undefined, pointerEvents: 'auto' }}
                               >
                                 <button
                                   className={styles.statusBtn}
@@ -650,11 +697,15 @@ export function ChecklistPage() {
                         )}
                       </td>
                       <td>
-                        <div className={styles.actions}>
+                        <div className={styles.actions} style={{ pointerEvents: 'auto' }}>
                           {(currentUser?.role === 'admin' || currentUser?.permissions?.checklist?.edit) && (
                             <button
-                              className="btn btn-ghost btn-icon btn-sm"
+                              className={`btn btn-ghost btn-icon btn-sm ${!isEditable ? styles.disabled : ''}`}
                               onClick={() => {
+                                if (!isEditable) {
+                                  toast.error('Bạn không được phân công thực hiện công việc này!')
+                                  return
+                                }
                                 setEditItem(item)
                                 setIsNewItem(false)
                                 setIsFormOpen(true)
@@ -665,8 +716,12 @@ export function ChecklistPage() {
                             </button>
                           )}
                           <button
-                            className="btn btn-ghost btn-icon btn-sm"
+                            className={`btn btn-ghost btn-icon btn-sm ${!isEditable ? styles.disabled : ''}`}
                             onClick={() => {
+                              if (!isEditable) {
+                                toast.error('Bạn không được phân công thực hiện công việc này!')
+                                return
+                              }
                               setNotesModalItem(item)
                               setNotesText(item.notes || '')
                             }}
@@ -676,7 +731,7 @@ export function ChecklistPage() {
                           </button>
                           {(currentUser?.role === 'admin' || currentUser?.permissions?.checklist?.delete) && (
                             <button
-                              className="btn btn-ghost btn-icon btn-sm"
+                              className={`btn btn-ghost btn-icon btn-sm ${!isEditable ? styles.disabled : ''}`}
                               onClick={() => handleDelete(item)}
                               title="Xoá"
                             >
@@ -688,24 +743,42 @@ export function ChecklistPage() {
                     </tr>
 
                     {/* Sub-item Rows (rendered when expanded) */}
-                    {isExpanded && hasSubItems && item.sub_items!.map((sub) => (
-                      <tr key={sub.id} className={`${styles.subRow} ${sub.status === 'error' ? styles.subRowError : ''}`}>
-                        <td className={styles.numCell} style={{ opacity: 0.3 }}>↳</td>
-                        <td className={styles.titleCell} style={{ paddingLeft: 24 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                             <span style={{ color: sub.status === 'done' ? 'var(--text-secondary)' : 'var(--text-primary)', fontSize: 13 }}>
-                                {sub.title}
-                             </span>
-                             <div 
-                                className={styles.statusDropdownWrapper}
-                                style={{ zIndex: subStatusDropdownId === `${item.id}-${sub.id}` ? 100 : undefined }}
-                              >
-                                <div 
-                                  style={{ cursor: 'pointer' }}
-                                  onClick={() => setSubStatusDropdownId(subStatusDropdownId === `${item.id}-${sub.id}` ? null : `${item.id}-${sub.id}`)}
+                    {isExpanded && hasSubItems && item.sub_items!.map((sub) => {
+                      const isSubEditable = canEditSubItem(item, sub);
+                      const subAssignee = users.find(u => u.id === sub.assigned_user_id);
+                      
+                      return (
+                        <tr key={sub.id} className={`${styles.subRow} ${sub.status === 'error' ? styles.subRowError : ''} ${!isSubEditable ? styles.notEditable : ''}`}>
+                          <td className={styles.numCell} style={{ opacity: 0.3 }}>↳</td>
+                          <td className={styles.titleCell} style={{ paddingLeft: 24 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                               <span style={{ color: sub.status === 'done' ? 'var(--text-secondary)' : 'var(--text-primary)', fontSize: 13 }}>
+                                  {sub.title}
+                               </span>
+                               {subAssignee && (
+                                 <span className={styles.userChip} style={{ fontSize: 10, padding: '1px 5px', opacity: 0.8 }} title={`Người thực hiện: ${subAssignee.name}`}>
+                                   <span className={styles.userInitial} style={{ width: 14, height: 14, fontSize: 8 }}>
+                                     {subAssignee.name.charAt(0).toUpperCase()}
+                                   </span>
+                                   {subAssignee.name}
+                                 </span>
+                               )}
+                               <div 
+                                  className={styles.statusDropdownWrapper}
+                                  style={{ zIndex: subStatusDropdownId === `${item.id}-${sub.id}` ? 100 : undefined, pointerEvents: 'auto' }}
                                 >
-                                  <StatusBadge status={sub.status} />
-                                </div>
+                                  <div 
+                                    style={{ cursor: isSubEditable ? 'pointer' : 'default' }}
+                                    onClick={() => {
+                                      if (!isSubEditable) {
+                                        toast.error('Bạn không được phân công thực hiện mục con này!')
+                                        return
+                                      }
+                                      setSubStatusDropdownId(subStatusDropdownId === `${item.id}-${sub.id}` ? null : `${item.id}-${sub.id}`)
+                                    }}
+                                  >
+                                    <StatusBadge status={sub.status} />
+                                  </div>
                                 
                                 {subStatusDropdownId === `${item.id}-${sub.id}` && (
                                   <div className={styles.statusDropdown} style={{ bottom: '0', top: 'auto', right: '-10px', left: 'auto' }}>
@@ -772,11 +845,13 @@ export function ChecklistPage() {
                         </td>
                         <td className={styles.empty}></td>
                       </tr>
-                    ))}
-                  </Fragment>
-                )
-              })}
-            </tbody>
+                    );
+                  })
+                }
+                </Fragment>
+              );
+            })}
+          </tbody>
           </table>
         </div>
       )}
