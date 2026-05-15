@@ -357,6 +357,12 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
         return true
       })
 
+      if (safeResult.data) {
+        set(state => ({
+          items: state.items.filter(i => i.id !== id)
+        }))
+      }
+
       return !safeResult.error
     } catch (error) {
       console.error('deleteItem error:', error)

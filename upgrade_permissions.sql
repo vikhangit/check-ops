@@ -10,7 +10,8 @@ ADD COLUMN IF NOT EXISTS responsible_user_id UUID REFERENCES public.profiles(id)
 
 -- 2. Add new columns to checklist_items
 ALTER TABLE public.checklist_items
-ADD COLUMN IF NOT EXISTS assigned_user_ids UUID[] DEFAULT '{}'::UUID[];
+ADD COLUMN IF NOT EXISTS assigned_user_ids UUID[] DEFAULT '{}'::UUID[],
+ADD COLUMN IF NOT EXISTS responsible_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
 
 -- 3. Migrate data from assigned_user_id to assigned_user_ids array
 -- For templates
@@ -21,7 +22,8 @@ WHERE assigned_user_id IS NOT NULL;
 
 -- For items
 UPDATE public.checklist_items
-SET assigned_user_ids = ARRAY[assigned_user_id]
+SET assigned_user_ids = ARRAY[assigned_user_id],
+    responsible_user_id = assigned_user_id
 WHERE assigned_user_id IS NOT NULL;
 
 -- 4. Drop old columns
